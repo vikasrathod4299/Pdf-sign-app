@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
 
@@ -57,17 +57,28 @@ const PrepareDocuments = () => {
     const adjustedOffsetX = offsetX - pageLeft;
     const adjustedOffsetY = offsetY - pageTop;
 
-    const updatedPositions = [...signaturePositions];
-    updatedPositions[index] = {
-      ...updatedPositions[index],
-      page,
-      left: adjustedOffsetX,
-      top: adjustedOffsetY,
-    };
+    // Update the position of the existing input
+    const updatedPositions = signaturePositions.map((position, i) => {
+      if (i === index) {
+        return {
+          ...position,
+          page,
+          left: adjustedOffsetX,
+          top: adjustedOffsetY,
+        };
+      }
+      return position;
+    });
     setSignaturePositions(updatedPositions);
   };
 
   const renderPages = () => {
+    const removeInput = (indexToRemove) => {
+      setSignaturePositions(
+        signaturePositions.filter((_, index) => index !== indexToRemove)
+      );
+    };
+
     const pages = [];
     for (let i = 0; i < numPages; i++) {
       pages.push(
@@ -80,23 +91,28 @@ const PrepareDocuments = () => {
           <Page pageNumber={i + 1} renderTextLayer={false} />
           {signaturePositions.map((position, index) =>
             position.page === i + 1 ? (
-              <input
-                className="border border-gray-500 rounded-full outline-blue-400 p-3"
+              <div
                 key={index}
-                type="text"
-                name="left"
-                onChange={(e) => handleInputChange(e, index)}
                 style={{
                   position: "absolute",
                   left: `${position.left}px`,
                   top: `${position.top}px`,
                 }}
-                draggable
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDropOnInput(e, i)}
-                placeholder="Enter text here"
-              />
+              >
+                <input
+                  className="border border-gray-500 rounded-full outline-blue-400 p-3"
+                  type="text"
+                  name="left"
+                  onChange={(e) => handleInputChange(e, index)}
+                  placeholder="Enter text here"
+                />
+                <button
+                  className="bg-gray-500 rounded-full text-white w-4 h-4 flex items-center pb-1 font-semibold justify-center absolute top-2 right-2 -mt-2 -mr-2"
+                  onClick={() => removeInput(index)}
+                >
+                  x
+                </button>
+              </div>
             ) : null
           )}
         </div>
