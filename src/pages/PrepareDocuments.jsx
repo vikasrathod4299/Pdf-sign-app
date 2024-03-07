@@ -16,7 +16,6 @@ const PrepareDocuments = () => {
     const offsetX = e.clientX - rect.left + e.target.scrollLeft;
     const offsetY = e.clientY - rect.top + e.target.scrollTop;
     const pageHeight = e.target.scrollHeight / numPages;
-    const pageWidth = e.target.scrollWidth;
 
     const page = pageIndex + 1;
     const pageTop = (page - 1) * pageHeight;
@@ -30,18 +29,42 @@ const PrepareDocuments = () => {
     ]);
   };
 
-  const handleInputChange = (e, index) => {
-    const { name, value } = e.target;
-    const updatedPositions = [...signaturePositions];
-    updatedPositions[index] = {
-      ...updatedPositions[index],
-      [name]: value,
-    };
-    setSignaturePositions(updatedPositions);
-  };
+  const handleInputChange = (e, index) => {};
 
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
+  };
+
+  const handleDragStart = (e, index) => {
+    e.dataTransfer.setData("index", index.toString());
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDropOnInput = (e, pageIndex) => {
+    e.preventDefault();
+    const index = parseInt(e.dataTransfer.getData("index"));
+    const rect = e.target.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left + e.target.scrollLeft;
+    const offsetY = e.clientY - rect.top + e.target.scrollTop;
+    const pageHeight = e.target.scrollHeight / numPages;
+
+    const page = pageIndex + 1;
+    const pageTop = (page - 1) * pageHeight;
+    const pageLeft = 0; // Assuming pages are always aligned to the left
+    const adjustedOffsetX = offsetX - pageLeft;
+    const adjustedOffsetY = offsetY - pageTop;
+
+    const updatedPositions = [...signaturePositions];
+    updatedPositions[index] = {
+      ...updatedPositions[index],
+      page,
+      left: adjustedOffsetX,
+      top: adjustedOffsetY,
+    };
+    setSignaturePositions(updatedPositions);
   };
 
   const renderPages = () => {
@@ -58,10 +81,10 @@ const PrepareDocuments = () => {
           {signaturePositions.map((position, index) =>
             position.page === i + 1 ? (
               <input
+                className="border border-gray-500 rounded-full outline-blue-400 p-3"
                 key={index}
                 type="text"
                 name="left"
-                value={position.left}
                 onChange={(e) => handleInputChange(e, index)}
                 style={{
                   position: "absolute",
@@ -69,6 +92,10 @@ const PrepareDocuments = () => {
                   top: `${position.top}px`,
                 }}
                 draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDropOnInput(e, i)}
+                placeholder="Enter text here"
               />
             ) : null
           )}
