@@ -23,6 +23,7 @@ const AssignUser = () => {
     const users = data ? JSON.parse(data) : [];
     setUsers(users);
   }, []);
+
   return (
     <div className="container mx-auto px-52">
       <div className="flex flex-col gap-y-2">
@@ -48,7 +49,7 @@ const AssignUser = () => {
           </div>
           <div>
             <button
-              className="bg-blue-500 text-white text-center rounded-full p-2 px-3 font-medium hover:bg-blue-600 "
+              className="bg-blue-400 text-white text-center rounded-full p-2 px-3 font-medium hover:bg-blue-600 "
               onClick={handleAddUser}
             >
               Add User
@@ -85,7 +86,7 @@ const AssignUser = () => {
           <div>
             <Link
               to="/prepareDocument"
-              className="bg-blue-500 text-white text-center rounded-full p-2 px-3 font-medium hover:bg-blue-600 "
+              className="bg-blue-400 text-white text-center rounded-full p-2 px-3 font-medium hover:bg-blue-600 "
             >
               Continue
             </Link>
