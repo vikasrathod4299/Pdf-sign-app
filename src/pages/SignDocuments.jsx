@@ -50,7 +50,7 @@ const SignDocuments = () => {
 
         const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-        const page = pdfDoc.getPages()[pageIndex]; // Assuming pageIndex is 0-based
+        const page = pdfDoc.getPages()[pageIndex];
 
         const x = position.left;
         const y = page.getHeight() - position.top;
