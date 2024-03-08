@@ -102,7 +102,7 @@ const SignDocuments = () => {
             ) : null
           )}
           <div
-            className="bg-gray-200 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
+            className="bg-blue-400 text-center text-white rounded-full px-4 w-28 cursor-pointer py-2 font-bold focus:outline-none"
             onClick={() =>
               printTextToPdf(i, inputTexts[`${i}_left`], signaturePositions[i])
             }
