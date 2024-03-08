@@ -16,7 +16,7 @@ const Dashboard = () => {
         </Link>
         <div className="flex flex-col gap-y-2">
           <h1 className="text-2xl font-bold">Review Signed Documents</h1>
-          <p>You do not have any documents to sign</p>
+          <p>You do not have any documents to review</p>
         </div>
       </div>
     </div>

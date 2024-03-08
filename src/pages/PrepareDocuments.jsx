@@ -6,7 +6,9 @@ import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 
 const PrepareDocuments = () => {
-  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedDoc, setSelectedDoc] = useState(
+    "public/VarunSharma_Resume_1.pdf"
+  );
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
 
@@ -121,6 +123,10 @@ const PrepareDocuments = () => {
     return pages;
   };
 
+  const handleContinue = () => {
+    localStorage.setItem("coordinates", JSON.stringify(signaturePositions));
+  };
+
   return (
     <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
       <div className="w-96 p-4">
@@ -136,6 +142,13 @@ const PrepareDocuments = () => {
             className="bg-gray-200 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
           >
             Add text
+          </div>
+
+          <div
+            onClick={handleContinue}
+            className="bg-gray-200 mt-8 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
+          >
+            Continue
           </div>
         </div>
       </div>
