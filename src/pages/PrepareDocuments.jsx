@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
-
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import { useNavigate } from "react-router-dom";
 
 const PrepareDocuments = () => {
-  const [selectedDoc, setSelectedDoc] = useState(
-    "public/VarunSharma_Resume_1.pdf"
-  );
+  const navigate = useNavigate();
+
+  const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
 
@@ -125,6 +125,7 @@ const PrepareDocuments = () => {
 
   const handleContinue = () => {
     localStorage.setItem("coordinates", JSON.stringify(signaturePositions));
+    navigate("/signDocument");
   };
 
   return (

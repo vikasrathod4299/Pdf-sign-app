@@ -4,9 +4,7 @@ import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 const SignDocuments = () => {
-  const [selectedDoc, setSelectedDoc] = useState(
-    "public/VarunSharma_Resume_1.pdf"
-  );
+  const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const [inputTexts, setInputTexts] = useState({});
