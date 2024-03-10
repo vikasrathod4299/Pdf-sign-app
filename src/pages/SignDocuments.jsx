@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Page, Document } from "react-pdf";
 import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import SignatureCanvas from "react-signature-canvas";
 
 const SignDocuments = () => {
   const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
@@ -24,51 +25,60 @@ const SignDocuments = () => {
     }
   }, []);
 
-  const renderPages = () => {
-    const removeInput = (indexToRemove) => {
-      setSignaturePositions(
-        signaturePositions.filter((_, index) => index !== indexToRemove)
+  const signatureRef = useRef(null);
+
+  const handleTextChange = (e, pageIndex) => {
+    const { value } = e.target;
+    setInputTexts((prevState) => ({
+      ...prevState,
+      [`${pageIndex}_left`]: value,
+    }));
+  };
+  const printToPdf = async (pageIndex) => {
+    try {
+      const existingPdfBytes = await fetch(selectedDoc).then((res) =>
+        res.arrayBuffer()
       );
-    };
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const page = pdfDoc.getPages()[pageIndex];
 
-    const handleTextChange = (e, pageIndex) => {
-      const { name, value } = e.target;
-      setInputTexts((prevState) => ({
-        ...prevState,
-        [`${pageIndex}_left`]: value,
-      }));
-    };
+      signaturePositions.forEach(async (position) => {
+        if (position.page === pageIndex + 1) {
+          const x = position.left;
+          const y = page.getHeight() - position.top - 5;
 
-    const printTextToPdf = async (pageIndex, textToPrint, position) => {
-      try {
-        const existingPdfBytes = await fetch(selectedDoc).then((res) =>
-          res.arrayBuffer()
-        );
-        const pdfDoc = await PDFDocument.load(existingPdfBytes);
+          if (position.type === "text") {
+            const textToPrint = inputTexts[`${pageIndex}_left`] || "";
+            page.drawText(textToPrint, {
+              x,
+              y,
+              size: 12,
+              font: helveticaFont,
+              color: rgb(0, 0, 0),
+            });
+          } else if (position.type === "signature") {
+            const signatureDataUrl = signatureRef.current.toDataURL();
+            const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
+            page.drawImage(signatureImage, {
+              x,
+              y,
+              width: 100,
+              height: 50,
+            });
+          }
+        }
+      });
 
-        const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const modifiedPdfBytes = await pdfDoc.save();
+      const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
+      saveAs(blob, "modified_document.pdf");
+    } catch (error) {
+      console.error("Error adding text/signature to PDF:", error);
+    }
+  };
 
-        const page = pdfDoc.getPages()[pageIndex];
-
-        const x = position.left;
-        const y = page.getHeight() - position.top;
-
-        page.drawText(textToPrint, {
-          x,
-          y,
-          size: 12,
-          font: helveticaFont,
-          color: rgb(0, 0, 0),
-        });
-
-        const modifiedPdfBytes = await pdfDoc.save();
-        const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
-        saveAs(blob, "modified_document.pdf");
-      } catch (error) {
-        console.error("Error adding text to PDF:", error);
-      }
-    };
-
+  const renderPages = () => {
     const pages = [];
     for (let i = 0; i < numPages; i++) {
       pages.push(
@@ -84,27 +94,36 @@ const SignDocuments = () => {
                   top: `${position.top}px`,
                 }}
               >
-                <input
-                  className="border border-gray-500 rounded-full outline-blue-400 p-3"
-                  type="text"
-                  name="left"
-                  placeholder="Enter text here"
-                  onChange={(e) => handleTextChange(e, i)}
-                  value={inputTexts[`${i}_left`] || ""}
-                />
-                <button
-                  className="bg-gray-500 rounded-full text-white w-4 h-4 flex items-center pb-1 font-semibold justify-center absolute top-2 right-2 -mt-2 -mr-2"
-                  onClick={() => removeInput(index)}
-                >
-                  x
-                </button>
+                {position.type === "text" && (
+                  <input
+                    className="border border-gray-500 rounded-full outline-blue-400 p-3"
+                    type="text"
+                    name="left"
+                    placeholder="Enter text here"
+                    onChange={(e) => handleTextChange(e, i)}
+                    value={inputTexts[`${i}_left`] || ""}
+                  />
+                )}
+                {position.type === "signature" && (
+                  <SignatureCanvas
+                    ref={signatureRef}
+                    canvasProps={{
+                      className: "border border-gray-500 rounded-md bg-white",
+                      width: 300,
+                      height: 150,
+                    }}
+                  />
+                )}
               </div>
             ) : null
           )}
           <div
             className="bg-blue-400 text-center text-white rounded-full px-4 w-28 cursor-pointer py-2 font-bold focus:outline-none"
             onClick={() =>
-              printTextToPdf(i, inputTexts[`${i}_left`], signaturePositions[i])
+              printToPdf(
+                i,
+                signaturePositions.find((pos) => pos.page === i + 1)
+              )
             }
           >
             Next

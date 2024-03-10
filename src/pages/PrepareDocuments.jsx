@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
+import { useNavigate } from "react-router-dom";
+import SignatureCanvas from "react-signature-canvas";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import { useNavigate } from "react-router-dom";
+import { DragHandleDots2Icon } from "@radix-ui/react-icons";
 
 const PrepareDocuments = () => {
   const navigate = useNavigate();
 
   const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
-  const [signaturePositions, setSignaturePositions] = useState([]);
+  const [inputPositions, setInputPositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
+
+  const signatureRef = useRef(null);
 
   const handleDrop = (e, pageIndex) => {
     e.preventDefault();
@@ -25,59 +29,30 @@ const PrepareDocuments = () => {
     const adjustedOffsetX = offsetX - pageLeft;
     const adjustedOffsetY = offsetY - pageTop;
 
-    setSignaturePositions([
-      ...signaturePositions,
-      { page, left: adjustedOffsetX, top: adjustedOffsetY },
-    ]);
+    const type = e.dataTransfer.getData("type"); // Get the type of the dragged item
+
+    const newPosition = {
+      page,
+      left: adjustedOffsetX,
+      top: adjustedOffsetY,
+      type: type, // Assign the type of input
+    };
+
+    setInputPositions([...inputPositions, newPosition]);
   };
 
-  const handleInputChange = (e, index) => {};
-
-  const onLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
-  };
-
-  const handleDragStart = (e, index) => {
-    e.dataTransfer.setData("index", index.toString());
+  const handleDragStart = (e, type) => {
+    e.dataTransfer.setData("type", type);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
   };
 
-  const handleDropOnInput = (e, pageIndex) => {
-    e.preventDefault();
-    const index = parseInt(e.dataTransfer.getData("index"));
-    const rect = e.target.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left + e.target.scrollLeft;
-    const offsetY = e.clientY - rect.top + e.target.scrollTop;
-    const pageHeight = e.target.scrollHeight / numPages;
-
-    const page = pageIndex + 1;
-    const pageTop = (page - 1) * pageHeight;
-    const pageLeft = 0; // Assuming pages are always aligned to the left
-    const adjustedOffsetX = offsetX - pageLeft;
-    const adjustedOffsetY = offsetY - pageTop;
-
-    // Update the position of the existing input
-    const updatedPositions = signaturePositions.map((position, i) => {
-      if (i === index) {
-        return {
-          ...position,
-          page,
-          left: adjustedOffsetX,
-          top: adjustedOffsetY,
-        };
-      }
-      return position;
-    });
-    setSignaturePositions(updatedPositions);
-  };
-
   const renderPages = () => {
     const removeInput = (indexToRemove) => {
-      setSignaturePositions(
-        signaturePositions.filter((_, index) => index !== indexToRemove)
+      setInputPositions(
+        inputPositions.filter((_, index) => index !== indexToRemove)
       );
     };
 
@@ -87,12 +62,13 @@ const PrepareDocuments = () => {
         <div
           key={i}
           onDrop={(e) => handleDrop(e, i)}
-          onDragOver={(e) => e.preventDefault()}
+          onDragOver={handleDragOver}
           style={{ position: "relative" }}
         >
           <Page pageNumber={i + 1} renderTextLayer={false} />
-          {signaturePositions.map((position, index) =>
-            position.page === i + 1 ? (
+          {inputPositions
+            .filter((pos) => pos.page === i + 1)
+            .map((position, index) => (
               <div
                 key={index}
                 style={{
@@ -101,30 +77,30 @@ const PrepareDocuments = () => {
                   top: `${position.top}px`,
                 }}
               >
-                <input
-                  className="border border-gray-500 rounded-full outline-blue-400 p-3"
-                  type="text"
-                  name="left"
-                  onChange={(e) => handleInputChange(e, index)}
-                  placeholder="Enter text here"
-                />
-                <button
-                  className="bg-gray-500 rounded-full text-white w-4 h-4 flex items-center pb-1 font-semibold justify-center absolute top-2 right-2 -mt-2 -mr-2"
+                <div className="bg-gray-400 py-2 px-3 font-bold tracking-wider gap-x-2 cursor-grab text-white rounded-md flex items-center active:cursor-grabbing">
+                  <DragHandleDots2Icon className="h-5 w-5" />
+                  {position.type}
+                </div>
+                {/* <button
+                  className="rounded-full text-white w-4 h-4 flex items-center pb-1 font-semibold justify-center absolute top-2 right-2 -mt-2 -mr-2"
                   onClick={() => removeInput(index)}
                 >
                   x
-                </button>
+                </button> */}
               </div>
-            ) : null
-          )}
+            ))}
         </div>
       );
     }
     return pages;
   };
 
+  const onLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+  };
+
   const handleContinue = () => {
-    localStorage.setItem("coordinates", JSON.stringify(signaturePositions));
+    localStorage.setItem("coordinates", JSON.stringify(inputPositions));
     navigate("/signDocument");
   };
 
@@ -141,8 +117,16 @@ const PrepareDocuments = () => {
           <div
             draggable
             className="bg-gray-200 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
+            onDragStart={(e) => handleDragStart(e, "text")}
           >
             Add text
+          </div>
+          <div
+            draggable
+            className="bg-gray-200 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
+            onDragStart={(e) => handleDragStart(e, "signature")}
+          >
+            Add signature
           </div>
 
           <div
