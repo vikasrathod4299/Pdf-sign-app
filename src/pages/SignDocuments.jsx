@@ -1,8 +1,13 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Page, Document } from "react-pdf";
 import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import SignatureCanvas from "react-signature-canvas";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Pencil2Icon,
+} from "@radix-ui/react-icons";
 
 const SignDocuments = () => {
   const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
@@ -25,56 +30,52 @@ const SignDocuments = () => {
     }
   }, []);
 
-  const signatureRef = useRef(null);
+  const signatureRef = useRef([]);
 
   const handleTextChange = (e, pageIndex) => {
     const { value } = e.target;
-    setInputTexts((prevState) => ({
-      ...prevState,
-      [`${pageIndex}_left`]: value,
-    }));
+    console.log(pageIndex);
+    setInputTexts((p) => ({ ...p, [pageIndex]: value }));
   };
-  const printToPdf = async (pageIndex) => {
+
+  const printToPdf = async () => {
     try {
       const existingPdfBytes = await fetch(selectedDoc).then((res) =>
         res.arrayBuffer()
       );
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const page = pdfDoc.getPages()[pageIndex];
-
-      signaturePositions.forEach(async (position) => {
-        if (position.page === pageIndex + 1) {
-          const x = position.left;
-          const y = page.getHeight() - position.top - 5;
-
-          if (position.type === "text") {
-            const textToPrint = inputTexts[`${pageIndex}_left`] || "";
-            page.drawText(textToPrint, {
-              x,
-              y,
-              size: 12,
-              font: helveticaFont,
-              color: rgb(0, 0, 0),
-            });
-          } else if (position.type === "signature") {
-            const signatureDataUrl = signatureRef.current.toDataURL();
-            const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-            page.drawImage(signatureImage, {
-              x,
-              y,
-              width: 100,
-              height: 50,
-            });
-          }
+      signaturePositions.forEach(async (input, index) => {
+        const page = pdfDoc.getPage(input.page - 1);
+        const x = input.left;
+        const y = page.getHeight() - input.top - 25;
+        if (input.type === "text") {
+          const textToPrint = inputTexts[index];
+          console.log(x, y, textToPrint);
+          page.drawText(textToPrint, {
+            x,
+            y,
+            size: 12,
+            font: helveticaFont,
+            color: rgb(0, 0, 0),
+          });
+        } else if (input.type === "signature") {
+          const signatureDataUrl = signatureRef.current[index].toDataURL();
+          const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
+          page.drawImage(signatureImage, {
+            x,
+            y,
+            width: 100,
+            height: 50,
+          });
         }
       });
 
       const modifiedPdfBytes = await pdfDoc.save();
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
       saveAs(blob, "modified_document.pdf");
-    } catch (error) {
-      console.error("Error adding text/signature to PDF:", error);
+    } catch (err) {
+      console.log(err);
     }
   };
 
@@ -96,19 +97,20 @@ const SignDocuments = () => {
               >
                 {position.type === "text" && (
                   <input
-                    className="border border-gray-500 rounded-full outline-blue-400 p-3"
+                    className="border border-gray-500 rounded-md outline-blue-400  p-3"
                     type="text"
                     name="left"
                     placeholder="Enter text here"
-                    onChange={(e) => handleTextChange(e, i)}
-                    value={inputTexts[`${i}_left`] || ""}
+                    onChange={(e) => handleTextChange(e, index)}
+                    value={inputTexts[index] || ""}
                   />
                 )}
                 {position.type === "signature" && (
                   <SignatureCanvas
-                    ref={signatureRef}
+                    ref={(ref) => (signatureRef.current[index] = ref)}
                     canvasProps={{
-                      className: "border border-gray-500 rounded-md bg-white",
+                      className:
+                        "border border-gray-500 rounded-md bg-white hover:cursor-crosshair",
                       width: 300,
                       height: 150,
                     }}
@@ -117,17 +119,6 @@ const SignDocuments = () => {
               </div>
             ) : null
           )}
-          <div
-            className="bg-blue-400 text-center text-white rounded-full px-4 w-28 cursor-pointer py-2 font-bold focus:outline-none"
-            onClick={() =>
-              printToPdf(
-                i,
-                signaturePositions.find((pos) => pos.page === i + 1)
-              )
-            }
-          >
-            Next
-          </div>
         </div>
       );
     }
@@ -142,7 +133,21 @@ const SignDocuments = () => {
     <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
       <div className="w-96 p-4">
         <h1 className="text-2xl font-bold mb-8">Prepare Document</h1>
-        <div className="flex flex-col gap-y-3"></div>
+        <div className="flex flex-col gap-y-4">
+          <button className="bg-gray-200 w-28 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
+            Next <ChevronRightIcon className="w-4 h-4 font-bold" />
+          </button>
+          <button className="bg-gray-200 w-36 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
+            Previous{" "}
+            <ChevronLeftIcon className="className=" w-4 h-4 font-bold />
+          </button>
+          <button
+            onClick={printToPdf}
+            className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none"
+          >
+            Complete sign <Pencil2Icon />
+          </button>
+        </div>
       </div>
 
       <div

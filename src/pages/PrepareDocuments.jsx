@@ -1,8 +1,7 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
 import { useNavigate } from "react-router-dom";
-import SignatureCanvas from "react-signature-canvas";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import { DragHandleDots2Icon } from "@radix-ui/react-icons";
@@ -14,8 +13,6 @@ const PrepareDocuments = () => {
   const [inputPositions, setInputPositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
 
-  const signatureRef = useRef(null);
-
   const handleDrop = (e, pageIndex) => {
     e.preventDefault();
     const rect = e.target.getBoundingClientRect();
@@ -25,17 +22,17 @@ const PrepareDocuments = () => {
 
     const page = pageIndex + 1;
     const pageTop = (page - 1) * pageHeight;
-    const pageLeft = 0; // Assuming pages are always aligned to the left
+    const pageLeft = 0;
     const adjustedOffsetX = offsetX - pageLeft;
     const adjustedOffsetY = offsetY - pageTop;
 
-    const type = e.dataTransfer.getData("type"); // Get the type of the dragged item
+    const type = e.dataTransfer.getData("type");
 
     const newPosition = {
       page,
       left: adjustedOffsetX,
       top: adjustedOffsetY,
-      type: type, // Assign the type of input
+      type: type,
     };
 
     setInputPositions([...inputPositions, newPosition]);
@@ -49,6 +46,50 @@ const PrepareDocuments = () => {
     e.preventDefault();
   };
 
+  const handleInputDragStart = (e, index) => {
+    const type = inputPositions[index].type;
+    e.dataTransfer.setData("type", type);
+
+    e.dataTransfer.setData("inputIndex", index.toString());
+  };
+
+  const handleInputDragEnd = (e, pageIndex) => {
+    const index = e.dataTransfer.getData("inputIndex");
+    if (index !== "") {
+      handleInputDrop(e, pageIndex, parseInt(index));
+    }
+  };
+
+  const handleInputDrop = (e, pageIndex, index) => {
+    e.preventDefault();
+
+    const rect = e.target.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left + e.target.scrollLeft;
+    const offsetY = e.clientY - rect.top + e.target.scrollTop;
+    const pageHeight = e.target.scrollHeight / numPages;
+
+    const page = pageIndex + 1;
+    const pageTop = (page - 1) * pageHeight;
+    const pageLeft = 0;
+    const adjustedOffsetX = offsetX - pageLeft;
+    const adjustedOffsetY = offsetY - pageTop;
+
+    const updatedPositions = [...inputPositions];
+
+    if (updatedPositions[index]) {
+      updatedPositions.splice(index, 1);
+      console.log(updatedPositions);
+    }
+
+    updatedPositions.push({
+      page,
+      left: adjustedOffsetX,
+      top: adjustedOffsetY,
+      type: inputPositions[index].type,
+    });
+
+    setInputPositions(updatedPositions);
+  };
   const renderPages = () => {
     const removeInput = (indexToRemove) => {
       setInputPositions(
@@ -76,17 +117,22 @@ const PrepareDocuments = () => {
                   left: `${position.left}px`,
                   top: `${position.top}px`,
                 }}
+                draggable
+                onDragStart={(e) => handleInputDragStart(e, index)}
+                onDragEnd={(e) => handleInputDragEnd(e, i)}
+                onDrop={(e) => handleInputDrop(e, i, index)}
+                onDragOver={handleDragOver}
               >
                 <div className="bg-gray-400 py-2 px-3 font-bold tracking-wider gap-x-2 cursor-grab text-white rounded-md flex items-center active:cursor-grabbing">
                   <DragHandleDots2Icon className="h-5 w-5" />
                   {position.type}
                 </div>
-                {/* <button
+                <button
                   className="rounded-full text-white w-4 h-4 flex items-center pb-1 font-semibold justify-center absolute top-2 right-2 -mt-2 -mr-2"
                   onClick={() => removeInput(index)}
                 >
                   x
-                </button> */}
+                </button>
               </div>
             ))}
         </div>
@@ -123,7 +169,7 @@ const PrepareDocuments = () => {
           </div>
           <div
             draggable
-            className="bg-gray-200 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
+            className="bg-gray-200 rounded-full px-4 w-36 cursor-pointer py-2 font-bold text-black focus:outline-none"
             onDragStart={(e) => handleDragStart(e, "signature")}
           >
             Add signature
