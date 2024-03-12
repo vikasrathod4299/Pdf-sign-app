@@ -1,19 +1,18 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Page, Document } from "react-pdf";
 import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import SignatureCanvas from "react-signature-canvas";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  Pencil2Icon,
-} from "@radix-ui/react-icons";
+import { Pencil2Icon } from "@radix-ui/react-icons";
 
 const SignDocuments = () => {
   const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const [inputTexts, setInputTexts] = useState({});
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
+  const [signatureImages, setSignatureImages] = useState([]);
 
   useEffect(() => {
     try {
@@ -21,6 +20,7 @@ const SignDocuments = () => {
       if (data) {
         const pdfData = JSON.parse(data);
         setSignaturePositions(pdfData);
+        setSignatureImages(Array(pdfData.length).fill(null)); // Initialize signatureImages state
       }
     } catch (error) {
       console.error(
@@ -34,8 +34,34 @@ const SignDocuments = () => {
 
   const handleTextChange = (e, pageIndex) => {
     const { value } = e.target;
-    console.log(pageIndex);
-    setInputTexts((p) => ({ ...p, [pageIndex]: value }));
+    setInputTexts((prevInputTexts) => ({
+      ...prevInputTexts,
+      [pageIndex]: value,
+    }));
+  };
+
+  const openSignatureModal = (index) => {
+    setShowSignatureModal(true);
+    setCurrentSignatureIndex(index);
+  };
+
+  const closeSignatureModal = () => {
+    setShowSignatureModal(false);
+    setCurrentSignatureIndex(null);
+  };
+
+  const addSignature = () => {
+    if (currentSignatureIndex !== null) {
+      const signatureCanvas = signatureRef.current[currentSignatureIndex];
+      if (signatureCanvas) {
+        const newSignatureImages = [...signatureImages];
+        newSignatureImages[currentSignatureIndex] = signatureCanvas
+          .getTrimmedCanvas()
+          .toDataURL();
+        setSignatureImages(newSignatureImages);
+        closeSignatureModal();
+      }
+    }
   };
 
   const printToPdf = async () => {
@@ -45,13 +71,15 @@ const SignDocuments = () => {
       );
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      signaturePositions.forEach(async (input, index) => {
+
+      for (let index = 0; index < signaturePositions.length; index++) {
+        const input = signaturePositions[index];
         const page = pdfDoc.getPage(input.page - 1);
         const x = input.left;
         const y = page.getHeight() - input.top - 25;
+
         if (input.type === "text") {
-          const textToPrint = inputTexts[index];
-          console.log(x, y, textToPrint);
+          const textToPrint = inputTexts[index] || ""; // Ensure textToPrint is not undefined
           page.drawText(textToPrint, {
             x,
             y,
@@ -60,16 +88,23 @@ const SignDocuments = () => {
             color: rgb(0, 0, 0),
           });
         } else if (input.type === "signature") {
-          const signatureDataUrl = signatureRef.current[index].toDataURL();
-          const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-          page.drawImage(signatureImage, {
-            x,
-            y,
-            width: 100,
-            height: 50,
-          });
+          if (signatureImages[index]) {
+            // Check if signature image is available
+            const signatureImageBytes = await fetch(
+              signatureImages[index]
+            ).then((res) => res.arrayBuffer());
+            const signatureImageObj = await pdfDoc.embedPng(
+              signatureImageBytes
+            );
+            page.drawImage(signatureImageObj, {
+              x,
+              y,
+              width: 80,
+              height: 30,
+            });
+          }
         }
-      });
+      }
 
       const modifiedPdfBytes = await pdfDoc.save();
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
@@ -106,15 +141,23 @@ const SignDocuments = () => {
                   />
                 )}
                 {position.type === "signature" && (
-                  <SignatureCanvas
-                    ref={(ref) => (signatureRef.current[index] = ref)}
-                    canvasProps={{
-                      className:
-                        "border border-gray-500 rounded-md bg-white hover:cursor-crosshair",
-                      width: 300,
-                      height: 150,
-                    }}
-                  />
+                  <>
+                    {signatureImages[index] ? (
+                      <img
+                        src={signatureImages[index]}
+                        width={100}
+                        height={50}
+                        alt="Signature"
+                      />
+                    ) : (
+                      <button
+                        onClick={() => openSignatureModal(index)}
+                        className="bg-gray-200 rounded-md px-4 py-2"
+                      >
+                        Add Signature
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             ) : null
@@ -134,13 +177,6 @@ const SignDocuments = () => {
       <div className="w-96 p-4">
         <h1 className="text-2xl font-bold mb-8">Prepare Document</h1>
         <div className="flex flex-col gap-y-4">
-          <button className="bg-gray-200 w-28 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
-            Next <ChevronRightIcon className="w-4 h-4 font-bold" />
-          </button>
-          <button className="bg-gray-200 w-36 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
-            Previous{" "}
-            <ChevronLeftIcon className="className=" w-4 h-4 font-bold />
-          </button>
           <button
             onClick={printToPdf}
             className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none"
@@ -160,6 +196,36 @@ const SignDocuments = () => {
           </div>
         </Document>
       </div>
+
+      {showSignatureModal && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-4 rounded-lg">
+            <SignatureCanvas
+              ref={(ref) => (signatureRef.current[currentSignatureIndex] = ref)}
+              canvasProps={{
+                className:
+                  "border border-gray-500 rounded-md bg-white hover:cursor-crosshair",
+                width: 300,
+                height: 150,
+              }}
+            />
+            <div className="flex gap-x-2 items-center justify-end">
+              <button
+                onClick={addSignature}
+                className="bg-blue-500 shadow-md text-white px-4 py-2 mt-2 rounded-md"
+              >
+                Enter
+              </button>
+              <button
+                onClick={closeSignatureModal}
+                className="bg-gray-400 shadow-md text-white px-4 py-2 mt-2 rounded-md"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
