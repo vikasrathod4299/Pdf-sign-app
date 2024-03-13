@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import PrepareDocuments from "./pages/PrepareDocuments";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SignDocuments from "./pages/SignDocuments";
 
 const router = () => {
   return (
@@ -14,6 +15,7 @@ const router = () => {
           <Route path="/" element={<Dashboard />} />
           <Route path="/assignUser" element={<AssignUser />} />
           <Route path="/prepareDocument" element={<PrepareDocuments />} />
+          <Route path="/signDocument" element={<SignDocuments />} />
         </Route>
       </Routes>
     </div>
