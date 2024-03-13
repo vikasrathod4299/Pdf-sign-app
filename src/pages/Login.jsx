@@ -1,12 +1,28 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+import { useAuth } from "../hooks/useAuth";
+import { login } from "../lib/apiCalls";
+import { useState } from "react";
 const Login = () => {
-  const { register, handleSubmit } = useForm();
-  const [user, setUser] = useState();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+  const { user, setUser } = useAuth();
+  const [error, setError] = useState(null);
+  const { mutate: signIn, isPending } = useMutation({
+    mutationFn: (data) => login(data),
+    onSuccess: (data) => {
+      setUser(data.data);
+    },
+    onError: (data) => {
+      setError(data.response.data.message);
+    },
+  });
   const onSubmit = (data) => {
-    localStorage.setItem("user", JSON.stringify(data));
-    setUser(data);
+    signIn(data);
   };
 
   if (user) {
@@ -55,6 +71,7 @@ const Login = () => {
               {/* login form */}
               <form
                 className="flex flex-col gap-y-2"
+                action="onSubmit"
                 onSubmit={handleSubmit(onSubmit)}
               >
                 <div>
@@ -63,8 +80,15 @@ const Login = () => {
                     className="w-full border border-gray-300 rounded-md outline-1 outline-blue-500"
                     type="email"
                     name="email"
-                    {...register("email", { required: true })}
+                    {...register("email", {
+                      required: "Email is required",
+                    })}
                   />
+                  {errors.email && (
+                    <span className="text-xs text-red-500">
+                      {errors.email.message}
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label>Password</label>
@@ -72,8 +96,15 @@ const Login = () => {
                     className="w-full border outline-1 outline-blue-500 border-gray-300 rounded-md"
                     type="password"
                     name="password"
-                    {...register("password", { required: true })}
+                    {...register("password", {
+                      required: "Password is required",
+                    })}
                   />
+                  {errors.password && (
+                    <span className="text-xs text-red-500">
+                      {errors.password.message}
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-2 items-center">
                   <input
@@ -83,9 +114,12 @@ const Login = () => {
                   />
                   <label id="rememberme">Remember me</label>
                 </div>
+                {error && <span className="text-xs text-red-500">{error}</span>}
                 <div className="mt-8">
                   <button
-                    className="bg-blue-400 text-white w-full rounded-sm p-1"
+                    className={`${
+                      isPending ? "bg-gray-400" : "bg-blue-400"
+                    }  text-white w-full rounded-sm p-1 `}
                     type="submit"
                   >
                     Login

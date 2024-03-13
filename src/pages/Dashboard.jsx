@@ -1,6 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  if (!user) {
+    return <Navigate to={"login"} />;
+  }
   return (
     <div className="container mx-[30%] flex justify-start">
       <div className="flex flex-col gap-y-4">
@@ -9,7 +14,7 @@ const Dashboard = () => {
           <p>You do not have any documents to sign</p>
         </div>
         <Link
-          to={"/assignUser"}
+          to={"/prepareDocument"}
           className="bg-blue-400 text-white text-center rounded-full p-2 font-medium"
         >
           Prepare Documents for Signing
