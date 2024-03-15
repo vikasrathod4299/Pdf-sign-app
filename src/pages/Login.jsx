@@ -14,8 +14,8 @@ const Login = () => {
   const [error, setError] = useState(null);
   const { mutate: signIn, isPending } = useMutation({
     mutationFn: (data) => login(data),
-    onSuccess: (data) => {
-      setUser(data.data);
+    onSuccess: (res) => {
+      setUser(res.data.data);
     },
     onError: (data) => {
       setError(data.response.data.message);

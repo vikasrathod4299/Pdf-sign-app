@@ -8,7 +8,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   function (config) {
     const user = LocalStorage.get("user");
-    config.headers.Authorization = user?.token;
+    config.headers.Authorization = `Bearer ${user?.token}`;
     return config;
   },
   function (error) {
@@ -18,4 +18,21 @@ apiClient.interceptors.request.use(
 
 export const login = async (data) => {
   return await apiClient.post("/auth/login", data);
+};
+
+export const sendDoc = async (data) => {
+  const formData = new FormData();
+  formData.append("doc", data.doc);
+  formData.append("email", data.email);
+  data.coordinates.forEach((item, index) => {
+    for (const [key, value] of Object.entries(item)) {
+      formData.append(`coordinates[${index}][${key}]`, value);
+    }
+  });
+  return await apiClient.post("/doc", formData);
+};
+
+export const getReviewDocuments = async ({ queryKey }) => {
+  const [key] = queryKey;
+  return await apiClient.get(`/doc/reviewDocs  `);
 };

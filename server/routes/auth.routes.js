@@ -30,6 +30,7 @@ router.post("/login", async (req, res) => {
     if (user) {
       if (await bcrypt.compare(password, user.password)) {
         const { password: ignorePassword, ...rest } = user._doc;
+
         const token = jwt.sign(
           { id: user._id, email: user.email },
           process.env.JWT_SECRET,
@@ -38,7 +39,7 @@ router.post("/login", async (req, res) => {
         res.cookie("token", token, { httpOnly: true, secure: true });
         return res.status(200).json({
           message: "You are logged in successfull!",
-          data: { user: rest, token },
+          data: { ...rest, token },
         });
       }
       return res.status(401).json({ message: "Wrong password." });
