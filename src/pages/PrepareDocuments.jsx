@@ -12,7 +12,7 @@ const PrepareDocuments = () => {
   const navigate = useNavigate();
   const [model, setModel] = useState(false);
   const [error, setError] = useState("");
-  const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
+  const [selectedDoc, setSelectedDoc] = useState(null);
   const [inputPositions, setInputPositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const [email, setEmail] = useState("");
