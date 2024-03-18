@@ -15,7 +15,7 @@ const router = () => {
           <Route path="/" element={<Dashboard />} />
           <Route path="/assignUser" element={<AssignUser />} />
           <Route path="/prepareDocument" element={<PrepareDocuments />} />
-          <Route path="/signDocument" element={<SignDocuments />} />
+          <Route path="/signDocument/:id" element={<SignDocuments />} />
         </Route>
       </Routes>
     </div>

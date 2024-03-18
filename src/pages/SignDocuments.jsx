@@ -4,9 +4,13 @@ import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import SignatureCanvas from "react-signature-canvas";
 import { Pencil2Icon } from "@radix-ui/react-icons";
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router-dom";
+import { getDocToSign } from "../lib/apiCalls";
 
 const SignDocuments = () => {
-  const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
+  const { id } = useParams();
+  const [selectedDoc, setSelectedDoc] = useState(null);
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const [inputTexts, setInputTexts] = useState({});
@@ -14,13 +18,32 @@ const SignDocuments = () => {
   const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
   const [signatureImages, setSignatureImages] = useState([]);
 
+  const { data: docData, isPending: docIsPending } = useQuery({
+    queryKey: ["fetchDocData", id],
+    queryFn: getDocToSign,
+    enabled: !!id,
+    onSuccess: (res) => {
+      console.log(res);
+    },
+  });
+
   useEffect(() => {
     try {
-      const data = localStorage.getItem("coordinates");
-      if (data) {
-        const pdfData = JSON.parse(data);
-        setSignaturePositions(pdfData);
-        setSignatureImages(Array(pdfData.length).fill(null)); // Initialize signatureImages state
+      if (!docIsPending) {
+        if (docData?.data?.data) {
+          const data = docData?.data?.data;
+          setSignaturePositions(
+            data.coordinates.map((item) => {
+              return {
+                left: parseFloat(item.left),
+                top: parseFloat(item.top),
+                page: parseInt(item.page),
+                type: item.type,
+              };
+            })
+          );
+          setSignatureImages(Array(data.coordinates.length).fill(null)); // Initialize signatureImages state
+        }
       }
     } catch (error) {
       console.error(
@@ -28,7 +51,7 @@ const SignDocuments = () => {
         error
       );
     }
-  }, []);
+  }, [docData]);
 
   const signatureRef = useRef([]);
 
@@ -190,11 +213,18 @@ const SignDocuments = () => {
         className="w-full bg-slate-300 overflow-y-auto"
         style={{ height: "calc(100vh - 64px)" }}
       >
-        <Document file={selectedDoc} onLoadSuccess={onLoadSuccess}>
-          <div className="flex flex-col justify-center items-center">
-            {renderPages()}
-          </div>
-        </Document>
+        {!docIsPending && (
+          <Document
+            file={`${import.meta.env.VITE_SERVER_API}/uploads/${
+              docData?.data?.data.docUrl
+            }`}
+            onLoadSuccess={onLoadSuccess}
+          >
+            <div className="flex flex-col justify-center items-center">
+              {renderPages()}
+            </div>
+          </Document>
+        )}
       </div>
 
       {showSignatureModal && (

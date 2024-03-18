@@ -33,6 +33,15 @@ export const sendDoc = async (data) => {
 };
 
 export const getReviewDocuments = async ({ queryKey }) => {
-  const [key] = queryKey;
-  return await apiClient.get(`/doc/reviewDocs  `);
+  return await apiClient.get(`/doc/reviewDocs`);
+};
+
+export const getDocToSign = async ({ queryKey }) => {
+  const [key, id] = queryKey;
+  return await apiClient.get(`/doc/${id}`);
+};
+
+export const getPdf = async ({ queryKey }) => {
+  const [key, url] = queryKey;
+  return await apiClient.get(`/uploads/${url}`);
 };
