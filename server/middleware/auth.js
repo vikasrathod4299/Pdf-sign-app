@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 
 export const verifyToken = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
-
   if (authHeader) {
     const token = authHeader.split(" ")[1];
     // eslint-disable-next-line no-undef

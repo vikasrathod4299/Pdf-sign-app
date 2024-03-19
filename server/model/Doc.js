@@ -25,7 +25,7 @@ const DocSchema = new Schema({
     type: String,
     required: true,
   },
-  status: { type: String, enum: ["pending"], default: "pending" },
+  status: { type: String, enum: ["pending", "signed"], default: "pending" },
 });
 
 export default mongoose.model("Doc", DocSchema);

@@ -172,7 +172,7 @@ const PrepareDocuments = () => {
     };
     send(data);
   };
-
+  console.log(selectedDoc);
   return (
     <>
       {model && (

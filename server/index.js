@@ -20,10 +20,6 @@ app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// app.all("/*", function (req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   next();
-// });
 app.use("/api/auth", authRoute);
 app.use("/api/doc", docRoute);
 app.listen(PORT, () => console.log(`Server is listening on port ${PORT} 🚀`));

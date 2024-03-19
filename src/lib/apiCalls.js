@@ -32,7 +32,7 @@ export const sendDoc = async (data) => {
   return await apiClient.post("/doc", formData);
 };
 
-export const getReviewDocuments = async ({ queryKey }) => {
+export const getReviewDocuments = async () => {
   return await apiClient.get(`/doc/reviewDocs`);
 };
 
@@ -44,4 +44,11 @@ export const getDocToSign = async ({ queryKey }) => {
 export const getPdf = async ({ queryKey }) => {
   const [key, url] = queryKey;
   return await apiClient.get(`/uploads/${url}`);
+};
+
+export const addSign = async (data) => {
+  const formData = new FormData();
+  console.log(data);
+  formData.append("doc", data.doc);
+  return await apiClient.put(`/doc/${data.id}`, formData);
 };

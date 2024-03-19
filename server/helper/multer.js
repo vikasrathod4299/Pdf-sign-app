@@ -14,10 +14,9 @@ const storage = multer.diskStorage({
     cb(null, storagePath);
   },
   filename: function (req, file, cb) {
+    console.log(file.originalname);
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const pdfUrl = `${file.fieldname}-${uniqueSuffix}-${path.extname(
-      file.originalname
-    )}`;
+    const pdfUrl = `${file.fieldname}-${uniqueSuffix}-.pdf`;
 
     if (file.fieldname === "doc") {
       req.doc = file.originalname;
@@ -37,6 +36,7 @@ export const upload = multer({
     if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
+      console.log("there");
       return cb(new Error("Only PDF files are allowed"));
     }
   },

@@ -1,16 +1,15 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Page, Document } from "react-pdf";
 import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import SignatureCanvas from "react-signature-canvas";
 import { Pencil2Icon } from "@radix-ui/react-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import { getDocToSign } from "../lib/apiCalls";
+import { addSign, getDocToSign } from "../lib/apiCalls";
 
 const SignDocuments = () => {
   const { id } = useParams();
-  const [selectedDoc, setSelectedDoc] = useState(null);
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const [inputTexts, setInputTexts] = useState({});
@@ -24,6 +23,16 @@ const SignDocuments = () => {
     enabled: !!id,
     onSuccess: (res) => {
       console.log(res);
+    },
+  });
+
+  const { mutate: completeSign } = useMutation({
+    mutationFn: addSign,
+    onSuccess: (res) => {
+      console.log(res.data);
+    },
+    onError: (err) => {
+      console.log(err);
     },
   });
 
@@ -88,14 +97,13 @@ const SignDocuments = () => {
   };
 
   const printToPdf = async () => {
-    console.log(
-      `${import.meta.env.VITE_SERVER_API}/uploads/${docData.data.data.docUrl}`
-    );
     try {
       const existingPdfBytes = await fetch(
-        `${import.meta.env}/uploads/${docData.data.data.docUrl}`
+        `${import.meta.env.VITE_SERVER_API}/uploads/${
+          docData.data.data.docUrl
+        }`,
+        { method: "GET" }
       ).then((res) => res.arrayBuffer());
-      console.log(existingPdfBytes);
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
@@ -134,9 +142,8 @@ const SignDocuments = () => {
       }
 
       const modifiedPdfBytes = await pdfDoc.save();
-      console.log(pdfDoc);
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
-      console.log(blob);
+      completeSign({ id: docData.data.data._id, doc: blob });
       saveAs(blob, "modified_document.pdf");
     } catch (err) {
       console.log(err);
