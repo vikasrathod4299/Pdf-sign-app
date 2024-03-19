@@ -42,7 +42,7 @@ const SignDocuments = () => {
               };
             })
           );
-          setSignatureImages(Array(data.coordinates.length).fill(null)); // Initialize signatureImages state
+          setSignatureImages(Array(data.coordinates.length).fill(null));
         }
       }
     } catch (error) {
@@ -88,10 +88,14 @@ const SignDocuments = () => {
   };
 
   const printToPdf = async () => {
+    console.log(
+      `${import.meta.env.VITE_SERVER_API}/uploads/${docData.data.data.docUrl}`
+    );
     try {
-      const existingPdfBytes = await fetch(selectedDoc).then((res) =>
-        res.arrayBuffer()
-      );
+      const existingPdfBytes = await fetch(
+        `${import.meta.env}/uploads/${docData.data.data.docUrl}`
+      ).then((res) => res.arrayBuffer());
+      console.log(existingPdfBytes);
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
@@ -130,7 +134,9 @@ const SignDocuments = () => {
       }
 
       const modifiedPdfBytes = await pdfDoc.save();
+      console.log(pdfDoc);
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
+      console.log(blob);
       saveAs(blob, "modified_document.pdf");
     } catch (err) {
       console.log(err);

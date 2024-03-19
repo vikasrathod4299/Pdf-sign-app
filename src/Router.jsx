@@ -15,8 +15,8 @@ const router = () => {
           <Route path="/" element={<Dashboard />} />
           <Route path="/assignUser" element={<AssignUser />} />
           <Route path="/prepareDocument" element={<PrepareDocuments />} />
-          <Route path="/signDocument/:id" element={<SignDocuments />} />
         </Route>
+        <Route path="/signDocument/:id" element={<SignDocuments />} />
       </Routes>
     </div>
   );

@@ -24,6 +24,16 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const updatedDoc = await DocModel.findByIdAndUpdate(id, { $set });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ message: "Somthing went wrong" });
+  }
+});
+
 router.post(
   "/",
   verifyToken,
