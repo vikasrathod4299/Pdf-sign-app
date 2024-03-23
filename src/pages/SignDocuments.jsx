@@ -3,8 +3,12 @@ import { Page, Document } from "react-pdf";
 import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import SignatureCanvas from "react-signature-canvas";
-import { Pencil2Icon } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  InfoCircledIcon,
+  Pencil1Icon,
+  Pencil2Icon,
+} from "@radix-ui/react-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { addSign, getDocToSign } from "../lib/apiCalls";
 
@@ -16,7 +20,8 @@ const SignDocuments = () => {
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
   const [signatureImages, setSignatureImages] = useState([]);
-
+  const [confirmModel, setConfirmModel] = useState(false);
+  const queryClient = useQueryClient();
   const { data: docData, isPending: docIsPending } = useQuery({
     queryKey: ["fetchDocData", id],
     queryFn: getDocToSign,
@@ -29,7 +34,8 @@ const SignDocuments = () => {
   const { mutate: completeSign } = useMutation({
     mutationFn: addSign,
     onSuccess: (res) => {
-      console.log(res.data);
+      queryClient.invalidateQueries({ queryKey: ["fetchDocData", id] });
+      setConfirmModel(false);
     },
     onError: (err) => {
       console.log(err);
@@ -72,9 +78,16 @@ const SignDocuments = () => {
     }));
   };
 
-  const openSignatureModal = (index) => {
+  const openSignatureModal = (index, signatureDataURL) => {
     setShowSignatureModal(true);
     setCurrentSignatureIndex(index);
+    if (signatureDataURL) {
+      // Load the previously added signature onto the canvas
+      const signatureCanvas = signatureRef.current[index];
+      if (signatureCanvas) {
+        signatureCanvas.fromDataURL(signatureDataURL);
+      }
+    }
   };
 
   const closeSignatureModal = () => {
@@ -179,12 +192,23 @@ const SignDocuments = () => {
                 {position.type === "signature" && (
                   <>
                     {signatureImages[index] ? (
-                      <img
-                        src={signatureImages[index]}
-                        width={100}
-                        height={50}
-                        alt="Signature"
-                      />
+                      <div className="flex gap-x-2 items-center">
+                        <img
+                          className="border border-blue-400"
+                          src={signatureImages[index]}
+                          width={100}
+                          height={50}
+                          alt="Signature"
+                        />
+                        <button
+                          onClick={() =>
+                            openSignatureModal(index, signatureImages[index])
+                          }
+                          className="bg-blue-400/80 rounded-full h-6 w-6 p-1 flex justify-center items-center"
+                        >
+                          <Pencil1Icon className="text-white w-6 h-6 font-bold" />
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => openSignatureModal(index)}
@@ -207,17 +231,26 @@ const SignDocuments = () => {
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
-
+  console.log(docData?.data?.data?.status);
   return (
     <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
       <div className="w-96 p-4">
-        <h1 className="text-2xl font-bold mb-8">Prepare Document</h1>
         <div className="flex flex-col gap-y-4">
+          <button className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
+            Next ⏭ {/*<Pencil2Icon /> */}
+          </button>
+          <button className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
+            Previous ⏮ {/*<Pencil2Icon /> */}
+          </button>
+
           <button
-            onClick={printToPdf}
+            onClick={() => {
+              setConfirmModel(true);
+            }}
+            disabled={docData?.data?.data.status !== "pending"}
             className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none"
           >
-            Complete sign <Pencil2Icon />
+            Complete sign ✍ {/*<Pencil2Icon /> */}
           </button>
         </div>
       </div>
@@ -226,7 +259,7 @@ const SignDocuments = () => {
         className="w-full bg-slate-300 overflow-y-auto"
         style={{ height: "calc(100vh - 64px)" }}
       >
-        {!docIsPending && (
+        {!docIsPending && docData?.data?.data.status === "pending" ? (
           <Document
             file={`${import.meta.env.VITE_SERVER_API}/uploads/${
               docData?.data?.data.docUrl
@@ -237,6 +270,14 @@ const SignDocuments = () => {
               {renderPages()}
             </div>
           </Document>
+        ) : (
+          !docIsPending && (
+            <div className="flex  justify-center items-center h-full w-full">
+              <h1 className="font-extrabold tracking-widest text-3xl text-slate-600/20 italic ">
+                Thank you for signature!
+              </h1>
+            </div>
+          )
         )}
       </div>
 
@@ -264,6 +305,32 @@ const SignDocuments = () => {
                 className="bg-blue-500 shadow-md text-white px-4 py-2 mt-2 rounded-md"
               >
                 Enter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmModel && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white flex flex-col gap-4 items-center p-4 rounded-lg w-[20%]">
+            <InfoCircledIcon className="w-8 h-8" />
+            <div className="flex justify-center text-center font-bold">
+              {
+                "By clicking 'Submit', you are acknowledging that your signature will be permanently submitted. Are you sure you want to proceed?"
+              }
+            </div>
+            <div className="flex gap-x-2 w-full">
+              <button
+                onClick={() => setConfirmModel(false)}
+                className="bg-gray-400 w-full shadow-md text-white px-4 py-2 mt-2 rounded-md"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={printToPdf}
+                className="bg-blue-500 w-full shadow-md text-white px-4 py-2 mt-2 rounded-md"
+              >
+                Submit
               </button>
             </div>
           </div>

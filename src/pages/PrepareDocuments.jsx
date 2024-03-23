@@ -223,24 +223,24 @@ const PrepareDocuments = () => {
             <p>Step 2</p>
             <div
               draggable
-              className="bg-gray-200 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
+              className="bg-gray-200 rounded-full px-4 w-32 cursor-pointer py-2 font-bold text-black focus:outline-none"
               onDragStart={(e) => handleDragStart(e, "text")}
             >
-              Add text
+              Add text ✏
             </div>
             <div
               draggable
-              className="bg-gray-200 rounded-full px-4 w-36 cursor-pointer py-2 font-bold text-black focus:outline-none"
+              className="bg-gray-200 rounded-full px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
               onDragStart={(e) => handleDragStart(e, "signature")}
             >
-              Add signature
+              Add signature ✍
             </div>
 
             <div
               onClick={handleContinue}
-              className="bg-gray-200 mt-8 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
+              className="bg-gray-200 mt-8 rounded-full px-4 w-32 cursor-pointer py-2 font-bold text-black focus:outline-none"
             >
-              Continue
+              Continue ▶
             </div>
           </div>
         </div>

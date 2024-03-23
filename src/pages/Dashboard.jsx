@@ -36,7 +36,6 @@ const Dashboard = () => {
             <table className="border-collapse w-full">
               <thead className="border-b-2">
                 <tr className="w-full flex justify-around">
-                  <th className="px-4 py-2">Name</th>
                   <th className="px-4 py-2">Email</th>
                   <th className="px-4 py-2">Document</th>
                   <th className="px-4 py-2">Status</th>
@@ -50,9 +49,6 @@ const Dashboard = () => {
                       key={index}
                       className="w-full flex justify-around items-center border-b"
                     >
-                      <td className="h-12 flex items-center justify-center px-4 py-2 truncate">
-                        {item?.name ? item.name : "No Data"}
-                      </td>
                       <td className="h-12 flex items-center justify-center px-4 py-2 truncate">
                         {item.receiverEmail}
                       </td>
