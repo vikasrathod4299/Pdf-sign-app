@@ -183,7 +183,7 @@ const SignDocuments = () => {
 
       const modifiedPdfBytes = await pdfDoc.save();
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
-      // completeSign({ id: docData.data.data._id, doc: blob });
+      completeSign({ id: docData.data.data._id, doc: blob });
       saveAs(blob, "modified_document.pdf");
     } catch (err) {
       console.log(err);
@@ -229,7 +229,7 @@ const SignDocuments = () => {
                             alt="Signature"
                           />
                         ) : (
-                          <p className="font-cursive font-bold text-3xl">
+                          <p className="font-cursive font-bold text-xl">
                             {signatureImages[index].value}
                           </p>
                         )}
