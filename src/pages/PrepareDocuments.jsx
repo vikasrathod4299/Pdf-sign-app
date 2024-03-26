@@ -7,6 +7,7 @@ import { DragHandleDots2Icon } from "@radix-ui/react-icons";
 import { sendDoc } from "../lib/apiCalls";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import Button from "../components/shared/Button";
 
 const PrepareDocuments = () => {
   const navigate = useNavigate();
@@ -236,12 +237,7 @@ const PrepareDocuments = () => {
               Add signature ✍
             </div>
 
-            <div
-              onClick={handleContinue}
-              className="bg-gray-200 mt-8 rounded-full px-4 w-32 cursor-pointer py-2 font-bold text-black focus:outline-none"
-            >
-              Continue ▶
-            </div>
+            <Button onClick={handleContinue}>Continue ▶</Button>
           </div>
         </div>
 

@@ -3,14 +3,12 @@ import { Page, Document } from "react-pdf";
 import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import SignatureCanvas from "react-signature-canvas";
-import {
-  InfoCircledIcon,
-  Pencil1Icon,
-  Pencil2Icon,
-} from "@radix-ui/react-icons";
+import { InfoCircledIcon, Pencil1Icon } from "@radix-ui/react-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { addSign, getDocToSign } from "../lib/apiCalls";
+import CedarvilleCursive from "/public/CedarvilleCursive-Regular.ttf";
+import fontkit from "@pdf-lib/fontkit"; // Import fontkit
 
 const SignDocuments = () => {
   const { id } = useParams();
@@ -21,7 +19,9 @@ const SignDocuments = () => {
   const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
   const [signatureImages, setSignatureImages] = useState([]);
   const [confirmModel, setConfirmModel] = useState(false);
+  const [signatureType, setSignatureType] = useState("canvas");
   const queryClient = useQueryClient();
+  const [textSignature, setTextSignature] = useState("");
   const { data: docData, isPending: docIsPending } = useQuery({
     queryKey: ["fetchDocData", id],
     queryFn: getDocToSign,
@@ -95,20 +95,30 @@ const SignDocuments = () => {
     setCurrentSignatureIndex(null);
   };
 
-  const addSignature = () => {
+  const addSignature = (type) => {
     if (currentSignatureIndex !== null) {
       const signatureCanvas = signatureRef.current[currentSignatureIndex];
+
       if (signatureCanvas) {
-        const newSignatureImages = [...signatureImages];
-        newSignatureImages[currentSignatureIndex] = signatureCanvas
-          .getTrimmedCanvas()
-          .toDataURL();
-        setSignatureImages(newSignatureImages);
+        if (type === "canvas") {
+          const newSignatureImages = [...signatureImages];
+          newSignatureImages[currentSignatureIndex] = {
+            type,
+            value: signatureCanvas.getTrimmedCanvas().toDataURL(),
+          };
+          setSignatureImages(newSignatureImages);
+        } else if (type === "text") {
+          const newSignatureImages = [...signatureImages];
+          newSignatureImages[currentSignatureIndex] = {
+            type,
+            value: signatureCanvas.value,
+          };
+          setSignatureImages(newSignatureImages);
+        }
         closeSignatureModal();
       }
     }
   };
-
   const printToPdf = async () => {
     try {
       const existingPdfBytes = await fetch(
@@ -117,6 +127,7 @@ const SignDocuments = () => {
         }`,
         { method: "GET" }
       ).then((res) => res.arrayBuffer());
+
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
@@ -138,25 +149,41 @@ const SignDocuments = () => {
         } else if (input.type === "signature") {
           if (signatureImages[index]) {
             // Check if signature image is available
-            const signatureImageBytes = await fetch(
-              signatureImages[index]
-            ).then((res) => res.arrayBuffer());
-            const signatureImageObj = await pdfDoc.embedPng(
-              signatureImageBytes
-            );
-            page.drawImage(signatureImageObj, {
-              x,
-              y,
-              width: 80,
-              height: 30,
-            });
+            if (signatureImages[index].type === "canvas") {
+              const signatureImageBytes = await fetch(
+                signatureImages[index].value
+              ).then((res) => res.arrayBuffer());
+              const signatureImageObj = await pdfDoc.embedPng(
+                signatureImageBytes
+              );
+              page.drawImage(signatureImageObj, {
+                x,
+                y,
+                width: 80,
+                height: 30,
+              });
+            } else {
+              const fontBytes = await fetch(CedarvilleCursive).then((res) =>
+                res.arrayBuffer()
+              );
+              const textToPrint = signatureImages[index].value || "";
+              const customFont = await pdfDoc.embedFont(fontBytes);
+              console.log(customFont);
+              page.setFont(customFont);
+              page.drawText(textToPrint, {
+                x,
+                y,
+                size: 24,
+                color: rgb(0, 0, 0),
+              });
+            }
           }
         }
       }
 
       const modifiedPdfBytes = await pdfDoc.save();
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
-      completeSign({ id: docData.data.data._id, doc: blob });
+      // completeSign({ id: docData.data.data._id, doc: blob });
       saveAs(blob, "modified_document.pdf");
     } catch (err) {
       console.log(err);
@@ -193,13 +220,19 @@ const SignDocuments = () => {
                   <>
                     {signatureImages[index] ? (
                       <div className="flex gap-x-2 items-center">
-                        <img
-                          className="border border-blue-400"
-                          src={signatureImages[index]}
-                          width={100}
-                          height={50}
-                          alt="Signature"
-                        />
+                        {signatureImages[index].type === "canvas" ? (
+                          <img
+                            className="border border-blue-400"
+                            src={signatureImages[index].value}
+                            width={100}
+                            height={50}
+                            alt="Signature"
+                          />
+                        ) : (
+                          <p className="font-cursive font-bold text-3xl">
+                            {signatureImages[index].value}
+                          </p>
+                        )}
                         <button
                           onClick={() =>
                             openSignatureModal(index, signatureImages[index])
@@ -231,7 +264,6 @@ const SignDocuments = () => {
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
-  console.log(docData?.data?.data?.status);
   return (
     <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
       <div className="w-96 p-4">
@@ -282,17 +314,48 @@ const SignDocuments = () => {
       </div>
 
       {showSignatureModal && (
-        <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-4 rounded-lg">
-            <SignatureCanvas
-              ref={(ref) => (signatureRef.current[currentSignatureIndex] = ref)}
-              canvasProps={{
-                className:
-                  "border border-gray-500 rounded-md bg-white hover:cursor-crosshair",
-                width: 300,
-                height: 150,
-              }}
-            />
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 flex  justify-center items-center">
+          <div className="bg-white p-4 flex flex-col  rounded-lg">
+            <div className="flex gap-x-4 my-2 self-center">
+              <p
+                className={`${
+                  signatureType === "canvas" ? "border-b-4 border-blue-400" : ""
+                } cursor-pointer`}
+                onClick={() => setSignatureType("canvas")}
+              >
+                Canvas
+              </p>
+              <p
+                className={`${
+                  signatureType === "text" ? "border-b-4 border-blue-400" : ""
+                } cursor-pointer`}
+                onClick={() => setSignatureType("text")}
+              >
+                Text
+              </p>
+            </div>
+            {signatureType === "canvas" ? (
+              <SignatureCanvas
+                ref={(ref) =>
+                  (signatureRef.current[currentSignatureIndex] = ref)
+                }
+                canvasProps={{
+                  className:
+                    "border border-gray-500 rounded-md bg-white hover:cursor-crosshair",
+                  width: 300,
+                  height: 150,
+                }}
+              />
+            ) : (
+              <input
+                className="border-2 border-blue-400 p-2 rounded-md outline-2 outline-blue-400 font-cursive text-2xl font-bold"
+                placeholder="Type signature"
+                onChange={(e) => setTextSignature(e.target.value)}
+                ref={(ref) =>
+                  (signatureRef.current[currentSignatureIndex] = ref)
+                }
+              />
+            )}
             <div className="flex gap-x-2 items-center justify-end">
               <button
                 onClick={closeSignatureModal}
@@ -301,7 +364,7 @@ const SignDocuments = () => {
                 Cancel
               </button>
               <button
-                onClick={addSignature}
+                onClick={() => addSignature(signatureType)}
                 className="bg-blue-500 shadow-md text-white px-4 py-2 mt-2 rounded-md"
               >
                 Enter
