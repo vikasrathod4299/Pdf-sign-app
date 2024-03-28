@@ -5,12 +5,14 @@ import PrepareDocuments from "./pages/PrepareDocuments";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SignDocuments from "./pages/SignDocuments";
+import Register from "./pages/Register";
 
 const router = () => {
   return (
     <div>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/assignUser" element={<AssignUser />} />

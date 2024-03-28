@@ -5,13 +5,16 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
     if (!user) {
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const newUser = new User({ name, email, password: hashedPassword });
+      const newUser = new User({
+        ...req.body,
+        password: hashedPassword,
+      });
       await newUser.save({ validateBeforeSave: true });
       return res.status(200).json({ message: "User registred successfully" });
     }

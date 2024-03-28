@@ -14,14 +14,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 function App() {
   return (
     <>
-      <Navbar />
-      <UserQueryProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <UserQueryProvider>
+          <Navbar />
           <BrowserRouter>
             <Router />
           </BrowserRouter>
-        </AuthProvider>
-      </UserQueryProvider>
+        </UserQueryProvider>
+      </AuthProvider>
     </>
   );
 }

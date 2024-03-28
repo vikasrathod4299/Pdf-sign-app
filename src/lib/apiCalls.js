@@ -19,6 +19,9 @@ apiClient.interceptors.request.use(
 export const login = async (data) => {
   return await apiClient.post("/auth/login", data);
 };
+export const register = async (data) => {
+  return await apiClient.post("/auth/register", data);
+};
 
 export const sendDoc = async (data) => {
   const formData = new FormData();

@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { login } from "../lib/apiCalls";
@@ -63,9 +63,12 @@ const Login = () => {
                 <h1 className="text-2xl font-semibold">Welcome back</h1>
                 <p>
                   {"Don't have account?"}{" "}
-                  <span className="text-blue-500 font-semibold">
+                  <Link
+                    to={"/register"}
+                    className="text-blue-500 cursor-pointer font-semibold"
+                  >
                     Signup here!
-                  </span>
+                  </Link>
                 </p>
               </div>
               {/* login form */}
