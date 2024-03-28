@@ -129,6 +129,7 @@ const SignDocuments = () => {
       ).then((res) => res.arrayBuffer());
 
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      pdfDoc.registerFontkit(fontkit);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
       for (let index = 0; index < signaturePositions.length; index++) {
@@ -168,7 +169,7 @@ const SignDocuments = () => {
               );
               const textToPrint = signatureImages[index].value || "";
               const customFont = await pdfDoc.embedFont(fontBytes);
-              console.log(customFont);
+
               page.setFont(customFont);
               page.drawText(textToPrint, {
                 x,
@@ -183,7 +184,7 @@ const SignDocuments = () => {
 
       const modifiedPdfBytes = await pdfDoc.save();
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
-      completeSign({ id: docData.data.data._id, doc: blob });
+      // completeSign({ id: docData.data.data._id, doc: blob });
       saveAs(blob, "modified_document.pdf");
     } catch (err) {
       console.log(err);
