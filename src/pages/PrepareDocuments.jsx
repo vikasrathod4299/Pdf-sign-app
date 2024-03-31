@@ -1,17 +1,32 @@
 import { useState } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
-import { useNavigate } from "react-router-dom";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import { DragHandleDots2Icon } from "@radix-ui/react-icons";
+import { sendDoc } from "../lib/apiCalls";
+import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import Button from "../components/shared/Button";
 
 const PrepareDocuments = () => {
   const navigate = useNavigate();
-
-  const [selectedDoc, setSelectedDoc] = useState("public/demo.pdf");
+  const [model, setModel] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState(null);
   const [inputPositions, setInputPositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
+  const [email, setEmail] = useState("");
+  const { mutate: send, isPending } = useMutation({
+    mutationFn: sendDoc,
+    onSuccess: (res) => {
+      setModel(false);
+      navigate("/");
+    },
+    onError: (err) => {
+      setError(err.response.data.message);
+    },
+  });
 
   const handleDrop = (e, pageIndex) => {
     e.preventDefault();
@@ -147,56 +162,99 @@ const PrepareDocuments = () => {
 
   const handleContinue = () => {
     localStorage.setItem("coordinates", JSON.stringify(inputPositions));
-    navigate("/signDocument");
+    setModel(true);
   };
 
+  const handleSendDoc = () => {
+    const data = {
+      coordinates: inputPositions,
+      doc: selectedDoc,
+      email,
+    };
+    send(data);
+  };
+  console.log(selectedDoc);
   return (
-    <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
-      <div className="w-96 p-4">
-        <h1 className="text-2xl font-bold mb-8">Prepare Document</h1>
-        <div className="flex flex-col gap-y-3">
-          <p>Step 1</p>
-          <div>
-            <FileUploader setSelectedDoc={setSelectedDoc} />
-          </div>
-          <p>Step 2</p>
-          <div
-            draggable
-            className="bg-gray-200 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
-            onDragStart={(e) => handleDragStart(e, "text")}
-          >
-            Add text
-          </div>
-          <div
-            draggable
-            className="bg-gray-200 rounded-full px-4 w-36 cursor-pointer py-2 font-bold text-black focus:outline-none"
-            onDragStart={(e) => handleDragStart(e, "signature")}
-          >
-            Add signature
-          </div>
-
-          <div
-            onClick={handleContinue}
-            className="bg-gray-200 mt-8 rounded-full px-4 w-28 cursor-pointer py-2 font-bold text-black focus:outline-none"
-          >
-            Continue
+    <>
+      {model && (
+        <div className="fixed top-0 left-0 w-full h-full z-10 bg-gray-900 bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white w-[30%] h-[25%] p-6 justify-between flex flex-col rounded-lg">
+            <div className="text-start">
+              <h1 className="text-3xl font-thin tracking-wider italic ">
+                {"Enter email."}
+              </h1>
+            </div>
+            <div className="flex flex-col text-sm">
+              <input
+                type="email"
+                value={email}
+                className=" border-2 border-blue-400 p-2 rounded-md outline-2 outline-blue-400"
+                placeholder={"Enter employee's email address."}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            {error && <span className="text-xs text-red-500">{error}</span>}
+            <div className="flex gap-x-2 justify-end">
+              <button
+                onClick={() => setModel(false)}
+                className="bg-gray-400 shadow-md text-white px-4 py-2 mt-2 rounded-md"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendDoc}
+                className={`${
+                  isPending ? "bg-gray-400" : "bg-blue-400 shadow-md"
+                }  text-white px-6 py-2 mt-2 rounded-md`}
+              >
+                Send
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div
-        className="w-full bg-slate-300 overflow-y-auto"
-        style={{ height: "calc(100vh - 64px)" }}
-      >
-        {selectedDoc && (
-          <Document file={selectedDoc} onLoadSuccess={onLoadSuccess}>
-            <div className="flex flex-col justify-center items-center">
-              {renderPages()}
+      )}
+      <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
+        <div className="w-96 p-4">
+          <h1 className="text-2xl font-bold mb-8">Prepare Document</h1>
+          <div className="flex flex-col gap-y-3">
+            <p>Step 1</p>
+            <div>
+              <FileUploader setSelectedDoc={setSelectedDoc} />
             </div>
-          </Document>
-        )}
+            <p>Step 2</p>
+            <div
+              draggable
+              className="bg-gray-200 rounded-full px-4 w-32 cursor-pointer py-2 font-bold text-black focus:outline-none"
+              onDragStart={(e) => handleDragStart(e, "text")}
+            >
+              Add text ✏
+            </div>
+            <div
+              draggable
+              className="bg-gray-200 rounded-full px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
+              onDragStart={(e) => handleDragStart(e, "signature")}
+            >
+              Add signature ✍
+            </div>
+
+            <Button onClick={handleContinue}>Continue ▶</Button>
+          </div>
+        </div>
+
+        <div
+          className="w-full bg-slate-300 overflow-y-auto"
+          style={{ height: "calc(100vh - 64px)" }}
+        >
+          {selectedDoc && (
+            <Document file={selectedDoc} onLoadSuccess={onLoadSuccess}>
+              <div className="flex flex-col justify-center items-center">
+                {renderPages()}
+              </div>
+            </Document>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

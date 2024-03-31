@@ -3,6 +3,8 @@ import "./App.css";
 import Navbar from "./components/Navbar";
 import Router from "./Router";
 import { pdfjs } from "react-pdf";
+import UserQueryProvider from "./components/Provider";
+import AuthProvider from "./hooks/useAuth";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.js",
@@ -12,10 +14,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 function App() {
   return (
     <>
-      <Navbar />
-      <BrowserRouter>
-        <Router />
-      </BrowserRouter>
+      <AuthProvider>
+        <UserQueryProvider>
+          <Navbar />
+          <BrowserRouter>
+            <Router />
+          </BrowserRouter>
+        </UserQueryProvider>
+      </AuthProvider>
     </>
   );
 }

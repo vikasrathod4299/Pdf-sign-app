@@ -7,7 +7,7 @@ const FileUploader = ({ setSelectedDoc }) => {
   return (
     <label htmlFor="fileInput" className="relative">
       <button className="bg-gray-200 rounded-full px-4 py-2 font-bold text-black focus:outline-none">
-        Upload a document
+        Upload a document 📃
       </button>
       <input
         id="fileInput"
