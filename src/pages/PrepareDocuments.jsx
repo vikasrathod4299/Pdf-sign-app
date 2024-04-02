@@ -8,6 +8,43 @@ import { sendDoc } from "../lib/apiCalls";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/shared/Button";
+import Draggable from "../components/shared/Draggable";
+import Model from "../components/shared/Model/Model";
+
+const EnterEmailPopUp = ({ setModel, error, handleSendDoc, isPending }) => {
+  const [email, setEmail] = useState("");
+  <>
+    <h1 className="text-3xl font-thin tracking-wider italic ">
+      {"Enter email."}
+    </h1>
+    <div className="flex flex-col text-sm">
+      <input
+        type="email"
+        value={email}
+        className=" border-2 border-blue-400 p-2 rounded-md outline-2 outline-blue-400"
+        placeholder={"Enter employee's email address."}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+    </div>
+    {error && <span className="text-xs text-red-500">{error}</span>}
+    <div className="flex gap-x-2 justify-end">
+      <button
+        onClick={() => setModel(false)}
+        className="bg-gray-400 shadow-md text-white px-4 py-2 mt-2 rounded-md"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={() => handleSendDoc(email)}
+        className={`${
+          isPending ? "bg-gray-400" : "bg-blue-400 shadow-md"
+        }  text-white px-6 py-2 mt-2 rounded-md`}
+      >
+        Send
+      </button>
+    </div>
+  </>;
+};
 
 const PrepareDocuments = () => {
   const navigate = useNavigate();
@@ -16,10 +53,9 @@ const PrepareDocuments = () => {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [inputPositions, setInputPositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
-  const [email, setEmail] = useState("");
   const { mutate: send, isPending } = useMutation({
     mutationFn: sendDoc,
-    onSuccess: (res) => {
+    onSuccess: () => {
       setModel(false);
       navigate("/");
     },
@@ -30,80 +66,65 @@ const PrepareDocuments = () => {
 
   const handleDrop = (e, pageIndex) => {
     e.preventDefault();
-    const rect = e.target.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left + e.target.scrollLeft;
-    const offsetY = e.clientY - rect.top + e.target.scrollTop;
-    const pageHeight = e.target.scrollHeight / numPages;
+    const inputIndex = e.dataTransfer.getData("inputIndex");
+    if (!inputIndex) {
+      const rect = e.target.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left + e.target.scrollLeft;
+      const offsetY = e.clientY - rect.top + e.target.scrollTop;
+      const pageHeight = e.target.scrollHeight / numPages;
 
-    const page = pageIndex + 1;
-    const pageTop = (page - 1) * pageHeight;
-    const pageLeft = 0;
-    const adjustedOffsetX = offsetX - pageLeft;
-    const adjustedOffsetY = offsetY - pageTop;
+      const page = pageIndex + 1;
+      const pageTop = (page - 1) * pageHeight;
+      const pageLeft = 0;
+      const adjustedOffsetX = offsetX - pageLeft;
+      const adjustedOffsetY = offsetY - pageTop + pageIndex * pageHeight;
 
-    const type = e.dataTransfer.getData("type");
+      const type = e.dataTransfer.getData("type");
+      const newPosition = {
+        page,
+        left: adjustedOffsetX,
+        top: adjustedOffsetY,
+        type: type,
+      };
 
-    const newPosition = {
-      page,
-      left: adjustedOffsetX,
-      top: adjustedOffsetY,
-      type: type,
-    };
+      setInputPositions([...inputPositions, newPosition]);
+    } else {
+      // Handle the case when inputIndex is provided (repositioning an existing input)
+      const rect = e.target.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left + e.target.scrollLeft;
+      const offsetY = e.clientY - rect.top + e.target.scrollTop;
+      const pageHeight = e.target.scrollHeight / numPages;
 
-    setInputPositions([...inputPositions, newPosition]);
+      const page = pageIndex + 1;
+      const pageTop = (page - 1) * pageHeight;
+      const pageLeft = 0;
+      const adjustedOffsetX = offsetX - pageLeft;
+      const adjustedOffsetY = offsetY - pageTop + pageIndex * pageHeight;
+
+      const type = e.dataTransfer.getData("type");
+      const newPosition = {
+        page,
+        left: adjustedOffsetX,
+        top: adjustedOffsetY,
+        type: type,
+      };
+      const updatedData = inputPositions.map((pos, index) =>
+        index === parseInt(inputIndex) ? newPosition : pos
+      );
+
+      setInputPositions(updatedData);
+    }
   };
 
-  const handleDragStart = (e, type) => {
+  const handleDragStart = (e, type, index = null) => {
     e.dataTransfer.setData("type", type);
+    if (index || index === 0) {
+      e.dataTransfer.setData("inputIndex", index?.toString());
+    }
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
-  };
-
-  const handleInputDragStart = (e, index) => {
-    const type = inputPositions[index].type;
-    e.dataTransfer.setData("type", type);
-
-    e.dataTransfer.setData("inputIndex", index.toString());
-  };
-
-  const handleInputDragEnd = (e, pageIndex) => {
-    const index = e.dataTransfer.getData("inputIndex");
-    if (index !== "") {
-      handleInputDrop(e, pageIndex, parseInt(index));
-    }
-  };
-
-  const handleInputDrop = (e, pageIndex, index) => {
-    e.preventDefault();
-
-    const rect = e.target.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left + e.target.scrollLeft;
-    const offsetY = e.clientY - rect.top + e.target.scrollTop;
-    const pageHeight = e.target.scrollHeight / numPages;
-
-    const page = pageIndex + 1;
-    const pageTop = (page - 1) * pageHeight;
-    const pageLeft = 0;
-    const adjustedOffsetX = offsetX - pageLeft;
-    const adjustedOffsetY = offsetY - pageTop;
-
-    const updatedPositions = [...inputPositions];
-
-    if (updatedPositions[index]) {
-      updatedPositions.splice(index, 1);
-      console.log(updatedPositions);
-    }
-
-    updatedPositions.push({
-      page,
-      left: adjustedOffsetX,
-      top: adjustedOffsetY,
-      type: inputPositions[index].type,
-    });
-
-    setInputPositions(updatedPositions);
   };
   const renderPages = () => {
     const removeInput = (indexToRemove) => {
@@ -125,18 +146,16 @@ const PrepareDocuments = () => {
           {inputPositions
             .filter((pos) => pos.page === i + 1)
             .map((position, index) => (
-              <div
+              <Draggable
+                handleDragStart={handleDragStart}
+                index={index}
                 key={index}
+                type={position.type}
                 style={{
                   position: "absolute",
                   left: `${position.left}px`,
                   top: `${position.top}px`,
                 }}
-                draggable
-                onDragStart={(e) => handleInputDragStart(e, index)}
-                onDragEnd={(e) => handleInputDragEnd(e, i)}
-                onDrop={(e) => handleInputDrop(e, i, index)}
-                onDragOver={handleDragOver}
               >
                 <div className="bg-gray-400 py-2 px-3 font-bold tracking-wider gap-x-2 cursor-grab text-white rounded-md flex items-center active:cursor-grabbing">
                   <DragHandleDots2Icon className="h-5 w-5" />
@@ -148,14 +167,13 @@ const PrepareDocuments = () => {
                 >
                   x
                 </button>
-              </div>
+              </Draggable>
             ))}
         </div>
       );
     }
     return pages;
   };
-
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
@@ -165,7 +183,7 @@ const PrepareDocuments = () => {
     setModel(true);
   };
 
-  const handleSendDoc = () => {
+  const handleSendDoc = (email) => {
     const data = {
       coordinates: inputPositions,
       doc: selectedDoc,
@@ -173,74 +191,46 @@ const PrepareDocuments = () => {
     };
     send(data);
   };
-  console.log(selectedDoc);
+
   return (
     <>
       {model && (
-        <div className="fixed top-0 left-0 w-full h-full z-10 bg-gray-900 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white w-[30%] h-[25%] p-6 justify-between flex flex-col rounded-lg">
-            <div className="text-start">
-              <h1 className="text-3xl font-thin tracking-wider italic ">
-                {"Enter email."}
-              </h1>
-            </div>
-            <div className="flex flex-col text-sm">
-              <input
-                type="email"
-                value={email}
-                className=" border-2 border-blue-400 p-2 rounded-md outline-2 outline-blue-400"
-                placeholder={"Enter employee's email address."}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            {error && <span className="text-xs text-red-500">{error}</span>}
-            <div className="flex gap-x-2 justify-end">
-              <button
-                onClick={() => setModel(false)}
-                className="bg-gray-400 shadow-md text-white px-4 py-2 mt-2 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendDoc}
-                className={`${
-                  isPending ? "bg-gray-400" : "bg-blue-400 shadow-md"
-                }  text-white px-6 py-2 mt-2 rounded-md`}
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
+        <Model>
+          <EnterEmailPopUp
+            setModel={setModel}
+            error={error}
+            isPending={isPending}
+            handleSendDoc={handleSendDoc}
+          />
+        </Model>
       )}
       <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
+        {/* Left bar */}
         <div className="w-96 p-4">
           <h1 className="text-2xl font-bold mb-8">Prepare Document</h1>
           <div className="flex flex-col gap-y-3">
             <p>Step 1</p>
-            <div>
-              <FileUploader setSelectedDoc={setSelectedDoc} />
-            </div>
+            <FileUploader setSelectedDoc={setSelectedDoc} />
             <p>Step 2</p>
-            <div
-              draggable
-              className="bg-gray-200 rounded-full px-4 w-32 cursor-pointer py-2 font-bold text-black focus:outline-none"
-              onDragStart={(e) => handleDragStart(e, "text")}
+            <Draggable
+              handleDragStart={handleDragStart}
+              type={"text"}
+              className="bg-gray-200 rounded-full px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
             >
               Add text ✏
-            </div>
-            <div
-              draggable
+            </Draggable>
+            <Draggable
+              handleDragStart={handleDragStart}
+              type={"signature"}
               className="bg-gray-200 rounded-full px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
-              onDragStart={(e) => handleDragStart(e, "signature")}
             >
               Add signature ✍
-            </div>
-
+            </Draggable>
             <Button onClick={handleContinue}>Continue ▶</Button>
           </div>
         </div>
 
+        {/* Main container */}
         <div
           className="w-full bg-slate-300 overflow-y-auto"
           style={{ height: "calc(100vh - 64px)" }}
