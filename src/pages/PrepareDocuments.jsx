@@ -13,37 +13,39 @@ import Model from "../components/shared/Model/Model";
 
 const EnterEmailPopUp = ({ setModel, error, handleSendDoc, isPending }) => {
   const [email, setEmail] = useState("");
-  <>
-    <h1 className="text-3xl font-thin tracking-wider italic ">
-      {"Enter email."}
-    </h1>
-    <div className="flex flex-col text-sm">
-      <input
-        type="email"
-        value={email}
-        className=" border-2 border-blue-400 p-2 rounded-md outline-2 outline-blue-400"
-        placeholder={"Enter employee's email address."}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-    </div>
-    {error && <span className="text-xs text-red-500">{error}</span>}
-    <div className="flex gap-x-2 justify-end">
-      <button
-        onClick={() => setModel(false)}
-        className="bg-gray-400 shadow-md text-white px-4 py-2 mt-2 rounded-md"
-      >
-        Cancel
-      </button>
-      <button
-        onClick={() => handleSendDoc(email)}
-        className={`${
-          isPending ? "bg-gray-400" : "bg-blue-400 shadow-md"
-        }  text-white px-6 py-2 mt-2 rounded-md`}
-      >
-        Send
-      </button>
-    </div>
-  </>;
+  return (
+    <>
+      <h1 className="text-3xl font-thin tracking-wider italic ">
+        {"Enter email."}
+      </h1>
+      <div className="flex flex-col text-sm">
+        <input
+          type="email"
+          value={email}
+          className=" border-2 border-blue-400 p-2 rounded-md outline-2 outline-blue-400"
+          placeholder={"Enter employee's email address."}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+      {error && <span className="text-xs text-red-500">{error}</span>}
+      <div className="flex gap-x-2 justify-end">
+        <button
+          onClick={() => setModel(false)}
+          className="bg-gray-400 shadow-md text-white px-4 py-2 mt-2 rounded-md"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => handleSendDoc(email)}
+          className={`${
+            isPending ? "bg-gray-400" : "bg-blue-400 shadow-md"
+          }  text-white px-6 py-2 mt-2 rounded-md`}
+        >
+          Send
+        </button>
+      </div>
+    </>
+  );
 };
 
 const PrepareDocuments = () => {
