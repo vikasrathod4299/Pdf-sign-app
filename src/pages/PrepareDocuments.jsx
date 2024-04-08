@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
+import UploadedPdf from "../components/UploadedPdf.jsx";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import { DragHandleDots2Icon } from "@radix-ui/react-icons";
@@ -52,7 +53,8 @@ const PrepareDocuments = () => {
   const navigate = useNavigate();
   const [model, setModel] = useState(false);
   const [error, setError] = useState("");
-  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [selectedDoc, setSelectedDoc] = useState(0);
+  const [docs, setDocs] = useState([]);
   const [inputPositions, setInputPositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const { mutate: send, isPending } = useMutation({
@@ -65,7 +67,7 @@ const PrepareDocuments = () => {
       setError(err.response.data.message);
     },
   });
-
+  console.log(docs);
   const handleDrop = (e, pageIndex) => {
     e.preventDefault();
     const inputIndex = e.dataTransfer.getData("inputIndex");
@@ -89,9 +91,15 @@ const PrepareDocuments = () => {
         type: type,
       };
 
-      setInputPositions([...inputPositions, newPosition]);
+      setDocs((prevDocs) => {
+        const updatedDocs = [...prevDocs];
+        updatedDocs[selectedDoc] = {
+          ...prevDocs[selectedDoc],
+          coordinates: [...prevDocs[selectedDoc].coordinates, newPosition],
+        };
+        return updatedDocs;
+      });
     } else {
-      // Handle the case when inputIndex is provided (repositioning an existing input)
       const rect = e.target.getBoundingClientRect();
       const offsetX = e.clientX - rect.left + e.target.scrollLeft;
       const offsetY = e.clientY - rect.top + e.target.scrollTop;
@@ -110,11 +118,18 @@ const PrepareDocuments = () => {
         top: adjustedOffsetY,
         type: type,
       };
-      const updatedData = inputPositions.map((pos, index) =>
-        index === parseInt(inputIndex) ? newPosition : pos
-      );
 
-      setInputPositions(updatedData);
+      setDocs((prevDocs) => {
+        const updatedDocs = [...prevDocs];
+        const updatedCoordinates = prevDocs[selectedDoc]["coordinates"].map(
+          (pos, index) => (index === parseInt(inputIndex) ? newPosition : pos)
+        );
+        updatedDocs[selectedDoc] = {
+          ...prevDocs[selectedDoc],
+          coordinates: updatedCoordinates,
+        };
+        return updatedDocs;
+      });
     }
   };
 
@@ -128,11 +143,12 @@ const PrepareDocuments = () => {
   const handleDragOver = (e) => {
     e.preventDefault();
   };
+
   const renderPages = () => {
     const removeInput = (indexToRemove) => {
-      setInputPositions(
-        inputPositions.filter((_, index) => index !== indexToRemove)
-      );
+      // setInputPositions(
+      //   inputPositions.filter((_, index) => index !== indexToRemove)
+      // );
     };
 
     const pages = [];
@@ -145,37 +161,39 @@ const PrepareDocuments = () => {
           style={{ position: "relative" }}
         >
           <Page pageNumber={i + 1} renderTextLayer={false} />
-          {inputPositions
-            .filter((pos) => pos.page === i + 1)
-            .map((position, index) => (
-              <Draggable
-                handleDragStart={handleDragStart}
-                index={index}
-                key={index}
-                type={position.type}
-                style={{
-                  position: "absolute",
-                  left: `${position.left}px`,
-                  top: `${position.top}px`,
-                }}
-              >
-                <div className="bg-gray-400 py-2 px-3 font-bold tracking-wider gap-x-2 cursor-grab text-white rounded-md flex items-center active:cursor-grabbing">
-                  <DragHandleDots2Icon className="h-5 w-5" />
-                  {position.type}
-                </div>
-                <button
-                  className="rounded-full text-white w-4 h-4 flex items-center pb-1 font-semibold justify-center absolute top-2 right-2 -mt-2 -mr-2"
-                  onClick={() => removeInput(index)}
+          {docs[selectedDoc]["coordinates"] &&
+            docs[selectedDoc]["coordinates"]
+              .filter((pos) => pos.page === i + 1)
+              .map((position, index) => (
+                <Draggable
+                  handleDragStart={handleDragStart}
+                  index={index}
+                  key={index}
+                  type={position.type}
+                  style={{
+                    position: "absolute",
+                    left: `${position.left}px`,
+                    top: `${position.top}px`,
+                  }}
                 >
-                  x
-                </button>
-              </Draggable>
-            ))}
+                  <div className="bg-gray-400 py-2 px-3 font-bold tracking-wider gap-x-2 cursor-grab text-white rounded-md flex items-center active:cursor-grabbing">
+                    <DragHandleDots2Icon className="h-5 w-5" />
+                    {position.type}
+                  </div>
+                  <button
+                    className="rounded-full text-white w-4 h-4 flex items-center pb-1 font-semibold justify-center absolute top-2 right-2 -mt-2 -mr-2"
+                    onClick={() => removeInput(index)}
+                  >
+                    x
+                  </button>
+                </Draggable>
+              ))}
         </div>
       );
     }
     return pages;
   };
+
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
@@ -212,23 +230,38 @@ const PrepareDocuments = () => {
           <h1 className="text-2xl font-bold mb-8">Prepare Document</h1>
           <div className="flex flex-col gap-y-3">
             <p>Step 1</p>
-            <FileUploader setSelectedDoc={setSelectedDoc} />
+            <FileUploader setDocs={setDocs} />
             <p>Step 2</p>
             <Draggable
               handleDragStart={handleDragStart}
               type={"text"}
-              className="bg-gray-200 rounded-full px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
+              className="bg-gray-200 text-center rounded-full px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
             >
               Add text ✏
             </Draggable>
             <Draggable
               handleDragStart={handleDragStart}
               type={"signature"}
-              className="bg-gray-200 rounded-full px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
+              className="bg-gray-200 rounded-full text-center px-4 w-44 cursor-pointer py-2 font-bold text-black focus:outline-none"
             >
               Add signature ✍
             </Draggable>
             <Button onClick={handleContinue}>Continue ▶</Button>
+          </div>
+          <hr className="my-8" />
+          <div className={" flex flex-col gap-y-3"}>
+            {docs.map((item, index) => {
+              return (
+                <UploadedPdf
+                  key={index}
+                  index={index}
+                  setSelectedDoc={setSelectedDoc}
+                  docs={docs}
+                  setDocs={setDocs}
+                  selectedDoc={selectedDoc}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -237,8 +270,11 @@ const PrepareDocuments = () => {
           className="w-full bg-slate-300 overflow-y-auto"
           style={{ height: "calc(100vh - 64px)" }}
         >
-          {selectedDoc && (
-            <Document file={selectedDoc} onLoadSuccess={onLoadSuccess}>
+          {docs.length > 0 && (
+            <Document
+              file={docs[selectedDoc]["doc"]}
+              onLoadSuccess={onLoadSuccess}
+            >
               <div className="flex flex-col justify-center items-center">
                 {renderPages()}
               </div>
