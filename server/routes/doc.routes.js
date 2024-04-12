@@ -80,36 +80,41 @@ router.put(
 );
 
 router.post(
-  "/",
+  "/:num",
   verifyToken,
-  upload.fields([
-    {
-      name: "doc",
-      maxCount: 1,
-    },
-  ]),
+  (req, res, next) => {
+    // Get the field names from req.files
+    const { num } = req.params;
+    const uploadFields = [];
+    for (let i = 0; i < parseInt(num); i++) {
+      uploadFields.push({ name: `docs[${i}].doc`, maxCount: 1 });
+    }
+
+    upload.fields(uploadFields)(req, res, next);
+  },
   async (req, res) => {
     try {
-      console.log(req.user.id);
-      const newDoc = new DocModel({
-        coordinates: req.body.coordinates,
-        docUrl: req.docUrl,
-        doc: req.doc,
-        receiverEmail: req.body.email,
-        senderId: new mongoose.Types.ObjectId(req.user.id),
-      });
-      await newDoc.save({ validateBeforeSave: true });
-      await sendMail({
-        from: {
-          name: "Miracle e-signature",
-          address: process.env.USER,
-        },
-        to: [req.body.email],
-        subject: "Sign you doucument.",
-        text: "Hello world",
-        html: `<a href=${process.env.CLIENT_URL}/signDocument/${newDoc._id}>Sign document.</a>`,
-      });
-      return res.status(200).json({ data: newDoc, message: "Document sent." });
+      console.log(req.body);
+
+      // const newDoc = new DocModel({
+      //   coordinates: req.body.coordinates,
+      //   docUrl: req.docUrl,
+      //   doc: req.doc,
+      //   receiverEmail: req.body.email,
+      //   senderId: new mongoose.Types.ObjectId(req.user.id),
+      // });
+      // await newDoc.save({ validateBeforeSave: true });
+      // await sendMail({
+      //   from: {
+      //     name: "Miracle e-signature",
+      //     address: process.env.USER,
+      //   },
+      //   to: [req.body.email],
+      //   subject: "Sign you doucument.",
+      //   text: "Hello world",
+      //   html: `<a href=${process.env.CLIENT_URL}/signDocument/${newDoc._id}>Sign document.</a>`,
+      // });
+      // return res.status(200).json({ data: newDoc, message: "Document sent." });
     } catch (err) {
       console.log(err);
       return res.status(500).json({ message: "Somthing went wrong." });

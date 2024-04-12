@@ -3,6 +3,21 @@ import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 const DocSchema = new Schema({
+  docs: [
+    {
+      doc: { type: String },
+      docUrl: { type: String },
+      coordinates: [
+        {
+          top: { type: String, required: true },
+          left: { type: String, required: true },
+          page: { type: String, required: true },
+          type: { type: String, required: true },
+        },
+      ],
+    },
+  ],
+
   doc: { type: String, required: true },
   docUrl: { type: String },
   coordinates: [

@@ -14,14 +14,10 @@ const storage = multer.diskStorage({
     cb(null, storagePath);
   },
   filename: function (req, file, cb) {
-    console.log(file.originalname);
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const pdfUrl = `${file.fieldname}-${uniqueSuffix}-.pdf`;
-
-    if (file.fieldname === "doc") {
-      req.doc = file.originalname;
-      req.docUrl = pdfUrl;
-    }
+    req.doc = file.originalname;
+    req.docUrl = pdfUrl;
     cb(null, pdfUrl);
   },
 });

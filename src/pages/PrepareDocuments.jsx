@@ -55,7 +55,6 @@ const PrepareDocuments = () => {
   const [error, setError] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(0);
   const [docs, setDocs] = useState([]);
-  const [inputPositions, setInputPositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
   const { mutate: send, isPending } = useMutation({
     mutationFn: sendDoc,
@@ -67,7 +66,6 @@ const PrepareDocuments = () => {
       setError(err.response.data.message);
     },
   });
-  console.log(docs);
   const handleDrop = (e, pageIndex) => {
     e.preventDefault();
     const inputIndex = e.dataTransfer.getData("inputIndex");
@@ -199,17 +197,10 @@ const PrepareDocuments = () => {
   };
 
   const handleContinue = () => {
-    localStorage.setItem("coordinates", JSON.stringify(inputPositions));
     setModel(true);
   };
-
   const handleSendDoc = (email) => {
-    const data = {
-      coordinates: inputPositions,
-      doc: selectedDoc,
-      email,
-    };
-    send(data);
+    send({ docs, email });
   };
 
   return (

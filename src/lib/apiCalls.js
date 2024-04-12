@@ -25,14 +25,19 @@ export const register = async (data) => {
 
 export const sendDoc = async (data) => {
   const formData = new FormData();
-  formData.append("doc", data.doc);
+
   formData.append("email", data.email);
-  data.coordinates.forEach((item, index) => {
-    for (const [key, value] of Object.entries(item)) {
-      formData.append(`coordinates[${index}][${key}]`, value);
-    }
+  data.docs.forEach((item, index) => {
+    formData.append(`docs[${index}].doc`, item.doc);
+    item.coordinates.forEach((c, cIndex) => {
+      formData.append(`docs[${index}].coordinates[${cIndex}].top`, c.top);
+      formData.append(`docs[${index}].coordinates[${cIndex}].left`, c.left);
+      formData.append(`docs[${index}].coordinates[${cIndex}].page`, c.page);
+      formData.append(`docs[${index}].coordinates[${cIndex}].type`, c.type);
+    });
   });
-  return await apiClient.post("/doc", formData);
+
+  return await apiClient.post(`/doc/${data.docs.length}`, formData);
 };
 
 export const getReviewDocuments = async () => {
