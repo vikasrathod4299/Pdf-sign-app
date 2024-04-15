@@ -9,19 +9,21 @@ import { useParams } from "react-router-dom";
 import { addSign, getDocToSign } from "../lib/apiCalls";
 import CedarvilleCursive from "/public/CedarvilleCursive-Regular.ttf";
 import fontkit from "@pdf-lib/fontkit"; // Import fontkit
+import UploadedPdf from "../components/UploadedPdf";
 
 const SignDocuments = () => {
   const { id } = useParams();
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
-  const [inputTexts, setInputTexts] = useState({});
+  const [inputTexts, setInputTexts] = useState([{}]);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
-  const [signatureImages, setSignatureImages] = useState([]);
+  const [signatureImages, setSignatureImages] = useState([[]]);
   const [confirmModel, setConfirmModel] = useState(false);
   const [signatureType, setSignatureType] = useState("canvas");
   const queryClient = useQueryClient();
   const [textSignature, setTextSignature] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState(0);
   const { data: docData, isPending: docIsPending } = useQuery({
     queryKey: ["fetchDocData", id],
     queryFn: getDocToSign,
@@ -46,7 +48,7 @@ const SignDocuments = () => {
     try {
       if (!docIsPending) {
         if (docData?.data?.data) {
-          const data = docData?.data?.data;
+          const data = docData?.data?.data.docs[selectedDoc];
           setSignaturePositions(
             data.coordinates.map((item) => {
               return {
@@ -57,7 +59,10 @@ const SignDocuments = () => {
               };
             })
           );
-          setSignatureImages(Array(data.coordinates.length).fill(null));
+          setSignatureImages(
+            (p) =>
+              (p[selectedDoc] = [Array(data.coordinates.length).fill(null)])
+          );
         }
       }
     } catch (error) {
@@ -66,16 +71,21 @@ const SignDocuments = () => {
         error
       );
     }
-  }, [docData]);
+  }, [docData, selectedDoc, docIsPending]);
 
   const signatureRef = useRef([]);
 
   const handleTextChange = (e, pageIndex) => {
     const { value } = e.target;
-    setInputTexts((prevInputTexts) => ({
-      ...prevInputTexts,
-      [pageIndex]: value,
-    }));
+    setInputTexts((prevInputTexts) => {
+      const data = prevInputTexts.find((item, index) => index === selectedDoc);
+      return [
+        {
+          ...data,
+          [pageIndex]: value,
+        },
+      ];
+    });
   };
 
   const openSignatureModal = (index, signatureDataURL) => {
@@ -106,14 +116,14 @@ const SignDocuments = () => {
             type,
             value: signatureCanvas.getTrimmedCanvas().toDataURL(),
           };
-          setSignatureImages(newSignatureImages);
+          setSignatureImages((p) => p[newSignatureImages]);
         } else if (type === "text") {
           const newSignatureImages = [...signatureImages];
           newSignatureImages[currentSignatureIndex] = {
             type,
             value: signatureCanvas.value,
           };
-          setSignatureImages(newSignatureImages);
+          setSignatureImages((p) => p[newSignatureImages]);
         }
         closeSignatureModal();
       }
@@ -121,71 +131,74 @@ const SignDocuments = () => {
   };
   const printToPdf = async () => {
     try {
-      const existingPdfBytes = await fetch(
-        `${import.meta.env.VITE_SERVER_API}/uploads/${
-          docData.data.data.docUrl
-        }`,
-        { method: "GET" }
-      ).then((res) => res.arrayBuffer());
+      await Promise.all(
+        docData.data.data.docs.map(async (item) => {
+          const existingPdfBytes = await fetch(
+            `${import.meta.env.VITE_SERVER_API}/uploads/${item.docUrl}`,
+            { method: "GET" }
+          ).then((res) => res.arrayBuffer());
 
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      pdfDoc.registerFontkit(fontkit);
-      const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+          const pdfDoc = await PDFDocument.load(existingPdfBytes);
+          pdfDoc.registerFontkit(fontkit);
+          const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-      for (let index = 0; index < signaturePositions.length; index++) {
-        const input = signaturePositions[index];
-        const page = pdfDoc.getPage(input.page - 1);
-        const x = input.left;
-        const y = page.getHeight() - input.top - 25;
-
-        if (input.type === "text") {
-          const textToPrint = inputTexts[index] || ""; // Ensure textToPrint is not undefined
-          page.drawText(textToPrint, {
-            x,
-            y,
-            size: 12,
-            font: helveticaFont,
-            color: rgb(0, 0, 0),
-          });
-        } else if (input.type === "signature") {
-          if (signatureImages[index]) {
-            // Check if signature image is available
-            if (signatureImages[index].type === "canvas") {
-              const signatureImageBytes = await fetch(
-                signatureImages[index].value
-              ).then((res) => res.arrayBuffer());
-              const signatureImageObj = await pdfDoc.embedPng(
-                signatureImageBytes
-              );
-              page.drawImage(signatureImageObj, {
-                x,
-                y,
-                width: 80,
-                height: 30,
-              });
-            } else {
-              const fontBytes = await fetch(CedarvilleCursive).then((res) =>
-                res.arrayBuffer()
-              );
-              const textToPrint = signatureImages[index].value || "";
-              const customFont = await pdfDoc.embedFont(fontBytes);
-
-              page.setFont(customFont);
+          for (let index = 0; index < signaturePositions.length; index++) {
+            const input = signaturePositions[index];
+            const page = pdfDoc.getPage(input.page - 1);
+            const x = input.left;
+            const y = page.getHeight() - input.top - 25;
+            if (input.type === "text") {
+              const textToPrint = inputTexts[index] || ""; // Ensure textToPrint is not undefined
               page.drawText(textToPrint, {
                 x,
                 y,
-                size: 24,
+                size: 12,
+                font: helveticaFont,
                 color: rgb(0, 0, 0),
               });
+            } else if (input.type === "signature") {
+              if (signatureImages[index]) {
+                // Check if signature image is available
+                if (signatureImages[index].type === "canvas") {
+                  const signatureImageBytes = await fetch(
+                    signatureImages[index].value
+                  ).then((res) => res.arrayBuffer());
+                  const signatureImageObj = await pdfDoc.embedPng(
+                    signatureImageBytes
+                  );
+                  page.drawImage(signatureImageObj, {
+                    x,
+                    y,
+                    width: 80,
+                    height: 30,
+                  });
+                } else {
+                  const fontBytes = await fetch(CedarvilleCursive).then((res) =>
+                    res.arrayBuffer()
+                  );
+                  const textToPrint = signatureImages[index].value || "";
+                  const customFont = await pdfDoc.embedFont(fontBytes);
+
+                  page.setFont(customFont);
+                  page.drawText(textToPrint, {
+                    x,
+                    y,
+                    size: 24,
+                    color: rgb(0, 0, 0),
+                  });
+                }
+              }
             }
           }
-        }
-      }
 
-      const modifiedPdfBytes = await pdfDoc.save();
-      const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
-      completeSign({ id: docData.data.data._id, doc: blob });
-      saveAs(blob, "modified_document.pdf");
+          const modifiedPdfBytes = await pdfDoc.save();
+          const blob = new Blob([modifiedPdfBytes], {
+            type: "application/pdf",
+          });
+          completeSign({ id: item._id, doc: blob });
+          saveAs(blob, "modified_document.pdf");
+        })
+      );
     } catch (err) {
       console.log(err);
     }
@@ -214,29 +227,33 @@ const SignDocuments = () => {
                     name="left"
                     placeholder="Enter text here"
                     onChange={(e) => handleTextChange(e, index)}
-                    value={inputTexts[index] || ""}
+                    value={inputTexts[selectedDoc][index] || ""}
                   />
                 )}
                 {position.type === "signature" && (
                   <>
-                    {signatureImages[index] ? (
+                    {signatureImages?.[selectedDoc]?.[index] ? (
                       <div className="flex gap-x-2 items-center">
-                        {signatureImages[index].type === "canvas" ? (
+                        {signatureImages[selectedDoc][index].type ===
+                        "canvas" ? (
                           <img
                             className="border border-blue-400"
-                            src={signatureImages[index].value}
+                            src={signatureImages[selectedDoc][index].value}
                             width={100}
                             height={50}
                             alt="Signature"
                           />
                         ) : (
                           <p className="font-cursive font-bold text-xl">
-                            {signatureImages[index].value}
+                            {signatureImages[selectedDoc][index].value}
                           </p>
                         )}
                         <button
                           onClick={() =>
-                            openSignatureModal(index, signatureImages[index])
+                            openSignatureModal(
+                              index,
+                              signatureImages[selectedDoc][index]
+                            )
                           }
                           className="bg-blue-400/80 rounded-full h-6 w-6 p-1 flex justify-center items-center"
                         >
@@ -286,6 +303,21 @@ const SignDocuments = () => {
             Complete sign ✍ {/*<Pencil2Icon /> */}
           </button>
         </div>
+        <hr className="my-8" />
+        <div className={" flex flex-col gap-y-3"}>
+          {docData?.data?.data?.docs?.length > 0 &&
+            docData?.data?.data?.docs?.map((item, index) => {
+              return (
+                <UploadedPdf
+                  key={index}
+                  index={index}
+                  setSelectedDoc={setSelectedDoc}
+                  docs={docData?.data?.data.docs[index]}
+                  selectedDoc={selectedDoc}
+                />
+              );
+            })}
+        </div>
       </div>
 
       <div
@@ -295,7 +327,7 @@ const SignDocuments = () => {
         {!docIsPending && docData?.data?.data.status === "pending" ? (
           <Document
             file={`${import.meta.env.VITE_SERVER_API}/uploads/${
-              docData?.data?.data.docUrl
+              docData.data.data.docs[selectedDoc].docUrl
             }`}
             onLoadSuccess={onLoadSuccess}
           >

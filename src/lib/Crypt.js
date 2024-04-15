@@ -1,6 +1,7 @@
 import * as CryptoJS from "crypto-js";
 
 export const encrypt = (keys, value) => {
+  console.log(keys);
   var key = CryptoJS.enc.Utf8.parse(keys);
   var iv = CryptoJS.enc.Utf8.parse(keys);
   var encrypted = CryptoJS.AES.encrypt(

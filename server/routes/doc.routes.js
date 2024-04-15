@@ -1,11 +1,11 @@
 /* eslint-disable no-undef */
 import express from "express";
 import { upload } from "../helper/multer.js";
+import { sendMail } from "../helper/sendMail.js";
 import DocModel from "../model/Doc.js";
 import mongoose from "mongoose";
 import path from "path";
 import { verifyToken } from "../middleware/auth.js";
-import { sendMail } from "../helper/sendMail.js";
 import { fileURLToPath } from "url";
 import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
@@ -86,6 +86,8 @@ router.post(
     // Get the field names from req.files
     const { num } = req.params;
     const uploadFields = [];
+    req.doc = [];
+    req.docUrl = [];
     for (let i = 0; i < parseInt(num); i++) {
       uploadFields.push({ name: `docs[${i}].doc`, maxCount: 1 });
     }
@@ -94,27 +96,32 @@ router.post(
   },
   async (req, res) => {
     try {
-      console.log(req.body);
+      req.doc.forEach((item, index) => {
+        req.body.docs[index]["doc"] = item;
+      });
+      req.docUrl.forEach((item, index) => {
+        req.body.docs[index]["docUrl"] = item;
+      });
+      console.log(req.body.docs);
 
-      // const newDoc = new DocModel({
-      //   coordinates: req.body.coordinates,
-      //   docUrl: req.docUrl,
-      //   doc: req.doc,
-      //   receiverEmail: req.body.email,
-      //   senderId: new mongoose.Types.ObjectId(req.user.id),
-      // });
-      // await newDoc.save({ validateBeforeSave: true });
-      // await sendMail({
-      //   from: {
-      //     name: "Miracle e-signature",
-      //     address: process.env.USER,
-      //   },
-      //   to: [req.body.email],
-      //   subject: "Sign you doucument.",
-      //   text: "Hello world",
-      //   html: `<a href=${process.env.CLIENT_URL}/signDocument/${newDoc._id}>Sign document.</a>`,
-      // });
-      // return res.status(200).json({ data: newDoc, message: "Document sent." });
+      const newDoc = new DocModel({
+        docs: req.body.docs,
+        senderId: new mongoose.Types.ObjectId(req.user.id),
+        receiverEmail: req.body.email,
+      });
+
+      await newDoc.save({ validateBeforeSave: true });
+      await sendMail({
+        from: {
+          name: "Miracle e-signature",
+          address: process.env.USER,
+        },
+        to: [req.body.email],
+        subject: "Sign you doucument.",
+        text: "Hello world",
+        html: `<a href=${process.env.CLIENT_URL}/signDocument/${newDoc._id}>Sign document.</a>`,
+      });
+      return res.status(200).json({ data: newDoc, message: "Document sent." });
     } catch (err) {
       console.log(err);
       return res.status(500).json({ message: "Somthing went wrong." });

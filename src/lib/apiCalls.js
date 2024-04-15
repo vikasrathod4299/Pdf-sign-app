@@ -30,10 +30,10 @@ export const sendDoc = async (data) => {
   data.docs.forEach((item, index) => {
     formData.append(`docs[${index}].doc`, item.doc);
     item.coordinates.forEach((c, cIndex) => {
-      formData.append(`docs[${index}].coordinates[${cIndex}].top`, c.top);
-      formData.append(`docs[${index}].coordinates[${cIndex}].left`, c.left);
-      formData.append(`docs[${index}].coordinates[${cIndex}].page`, c.page);
-      formData.append(`docs[${index}].coordinates[${cIndex}].type`, c.type);
+      formData.append(`docs[${index}][coordinates][${cIndex}][top]`, c.top);
+      formData.append(`docs[${index}][coordinates][${cIndex}][left]`, c.left);
+      formData.append(`docs[${index}][coordinates][${cIndex}][page]`, c.page);
+      formData.append(`docs[${index}][coordinates][${cIndex}][type]`, c.type);
     });
   });
 

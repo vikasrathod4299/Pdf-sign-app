@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { login } from "../lib/apiCalls";
 import { useState } from "react";
+import { encrypt } from "../lib/Crypt";
 const Login = () => {
   const {
     register,
