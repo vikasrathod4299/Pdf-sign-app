@@ -15,7 +15,7 @@ const SignDocuments = () => {
   const { id } = useParams();
   const [signaturePositions, setSignaturePositions] = useState([]);
   const [numPages, setNumPages] = useState(null);
-  const [inputTexts, setInputTexts] = useState([{}]);
+  const [inputTexts, setInputTexts] = useState([[]]);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
   const [signatureImages, setSignatureImages] = useState([[]]);
@@ -59,10 +59,13 @@ const SignDocuments = () => {
               };
             })
           );
-          setSignatureImages(
-            (p) =>
-              (p[selectedDoc] = [Array(data.coordinates.length).fill(null)])
+          setSignatureImages((p) =>
+            Array(docData.data.data.docs.length).fill(
+              Array(data.coordinates.length).fill(null)
+            )
           );
+
+          setInputTexts((p) => [...p]);
         }
       }
     } catch (error) {
@@ -77,14 +80,15 @@ const SignDocuments = () => {
 
   const handleTextChange = (e, pageIndex) => {
     const { value } = e.target;
+
     setInputTexts((prevInputTexts) => {
-      const data = prevInputTexts.find((item, index) => index === selectedDoc);
-      return [
-        {
-          ...data,
-          [pageIndex]: value,
-        },
-      ];
+      const data = docData.data.data.docs.map((item, index) => {
+        if (index === selectedDoc) {
+          return [value];
+        }
+        return prevInputTexts[index];
+      });
+      return data;
     });
   };
 
@@ -104,19 +108,29 @@ const SignDocuments = () => {
     setShowSignatureModal(false);
     setCurrentSignatureIndex(null);
   };
-
+  console.log(signatureRef);
   const addSignature = (type) => {
     if (currentSignatureIndex !== null) {
       const signatureCanvas = signatureRef.current[currentSignatureIndex];
 
       if (signatureCanvas) {
         if (type === "canvas") {
-          const newSignatureImages = [...signatureImages];
-          newSignatureImages[currentSignatureIndex] = {
-            type,
-            value: signatureCanvas.getTrimmedCanvas().toDataURL(),
-          };
-          setSignatureImages((p) => p[newSignatureImages]);
+          const newSignatureImages = signatureImages.map((item, index) => {
+            if (index === selectedDoc) {
+              return [
+                ...item,
+                { type, value: signatureCanvas.Page().toDataURL() },
+              ];
+            }
+            return item;
+          });
+
+          // newSignatureImages[currentSignatureIndex] = {
+          //   type,
+          //   value: signatureCanvas.getTrimmedCanvas().toDataURL(),
+          // };
+
+          setSignatureImages([...newSignatureImages]);
         } else if (type === "text") {
           const newSignatureImages = [...signatureImages];
           newSignatureImages[currentSignatureIndex] = {
@@ -132,7 +146,7 @@ const SignDocuments = () => {
   const printToPdf = async () => {
     try {
       await Promise.all(
-        docData.data.data.docs.map(async (item) => {
+        docData.data.data.docs.map(async (item, docIndex) => {
           const existingPdfBytes = await fetch(
             `${import.meta.env.VITE_SERVER_API}/uploads/${item.docUrl}`,
             { method: "GET" }
@@ -148,7 +162,7 @@ const SignDocuments = () => {
             const x = input.left;
             const y = page.getHeight() - input.top - 25;
             if (input.type === "text") {
-              const textToPrint = inputTexts[index] || ""; // Ensure textToPrint is not undefined
+              const textToPrint = inputTexts[docIndex][index] || ""; // Ensure textToPrint is not undefined
               page.drawText(textToPrint, {
                 x,
                 y,
@@ -157,11 +171,11 @@ const SignDocuments = () => {
                 color: rgb(0, 0, 0),
               });
             } else if (input.type === "signature") {
-              if (signatureImages[index]) {
+              if (signatureImages?.[docIndex]?.[index]) {
                 // Check if signature image is available
-                if (signatureImages[index].type === "canvas") {
+                if (signatureImages[docIndex][index].type === "canvas") {
                   const signatureImageBytes = await fetch(
-                    signatureImages[index].value
+                    signatureImages[docIndex][index].value
                   ).then((res) => res.arrayBuffer());
                   const signatureImageObj = await pdfDoc.embedPng(
                     signatureImageBytes
@@ -176,7 +190,8 @@ const SignDocuments = () => {
                   const fontBytes = await fetch(CedarvilleCursive).then((res) =>
                     res.arrayBuffer()
                   );
-                  const textToPrint = signatureImages[index].value || "";
+                  const textToPrint =
+                    signatureImages[docIndex][index].value || "";
                   const customFont = await pdfDoc.embedFont(fontBytes);
 
                   page.setFont(customFont);
@@ -227,7 +242,7 @@ const SignDocuments = () => {
                     name="left"
                     placeholder="Enter text here"
                     onChange={(e) => handleTextChange(e, index)}
-                    value={inputTexts[selectedDoc][index] || ""}
+                    value={inputTexts?.[selectedDoc]?.[index] || ""}
                   />
                 )}
                 {position.type === "signature" && (
@@ -282,6 +297,7 @@ const SignDocuments = () => {
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
+
   return (
     <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
       <div className="w-96 p-4">
@@ -324,7 +340,7 @@ const SignDocuments = () => {
         className="w-full bg-slate-300 overflow-y-auto"
         style={{ height: "calc(100vh - 64px)" }}
       >
-        {!docIsPending && docData?.data?.data.status === "pending" ? (
+        {!docIsPending && docData?.data?.data?.status === "pending" ? (
           <Document
             file={`${import.meta.env.VITE_SERVER_API}/uploads/${
               docData.data.data.docs[selectedDoc].docUrl

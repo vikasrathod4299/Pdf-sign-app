@@ -102,8 +102,6 @@ router.post(
       req.docUrl.forEach((item, index) => {
         req.body.docs[index]["docUrl"] = item;
       });
-      console.log(req.body.docs);
-
       const newDoc = new DocModel({
         docs: req.body.docs,
         senderId: new mongoose.Types.ObjectId(req.user.id),

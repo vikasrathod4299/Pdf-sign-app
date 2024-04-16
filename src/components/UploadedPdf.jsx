@@ -10,7 +10,6 @@ const UploadedPdf = ({ setSelectedDoc, index, docs, setDocs, selectedDoc }) => {
     });
     setDocs([...updatedDocs]);
   };
-  console.log(docs);
   return (
     <div
       className={`
