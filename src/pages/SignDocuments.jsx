@@ -59,13 +59,6 @@ const SignDocuments = () => {
               };
             })
           );
-          setSignatureImages((p) =>
-            Array(docData.data.data.docs.length).fill(
-              Array(data.coordinates.length).fill(null)
-            )
-          );
-
-          setInputTexts((p) => [...p]);
         }
       }
     } catch (error) {
@@ -76,6 +69,21 @@ const SignDocuments = () => {
     }
   }, [docData, selectedDoc, docIsPending]);
 
+  useEffect(() => {
+    if (!docIsPending) {
+      if (docData?.data?.data) {
+        const data = docData?.data?.data.docs[selectedDoc];
+        setSignatureImages((p) =>
+          Array(docData.data.data.docs.length).fill(
+            Array(data.coordinates.length).fill(null)
+          )
+        );
+      }
+    }
+
+    setInputTexts((p) => [...p]);
+  }, [docData, docIsPending]);
+  console.log(signatureImages);
   const signatureRef = useRef([]);
 
   const handleTextChange = (e, pageIndex) => {
@@ -108,7 +116,6 @@ const SignDocuments = () => {
     setShowSignatureModal(false);
     setCurrentSignatureIndex(null);
   };
-  console.log(signatureRef);
   const addSignature = (type) => {
     if (currentSignatureIndex !== null) {
       const signatureCanvas = signatureRef.current[currentSignatureIndex];
@@ -117,27 +124,37 @@ const SignDocuments = () => {
         if (type === "canvas") {
           const newSignatureImages = signatureImages.map((item, index) => {
             if (index === selectedDoc) {
-              return [
-                ...item,
-                { type, value: signatureCanvas.Page().toDataURL() },
-              ];
+              return item.map((docItem, docIndex) => {
+                if (currentSignatureIndex === docIndex) {
+                  return {
+                    type,
+                    value: signatureCanvas.getTrimmedCanvas().toDataURL(),
+                  };
+                }
+                return docItem;
+              });
+            }
+            return item;
+          });
+          setSignatureImages([...newSignatureImages]);
+        } else if (type === "text") {
+          const newSignatureImages = signatureImages.map((item, index) => {
+            if (index === selectedDoc) {
+              return item.map((docItem, docIndex) => {
+                console.log();
+                if (currentSignatureIndex === docIndex) {
+                  return {
+                    type,
+                    value: signatureCanvas.value,
+                  };
+                }
+                return docItem;
+              });
             }
             return item;
           });
 
-          // newSignatureImages[currentSignatureIndex] = {
-          //   type,
-          //   value: signatureCanvas.getTrimmedCanvas().toDataURL(),
-          // };
-
           setSignatureImages([...newSignatureImages]);
-        } else if (type === "text") {
-          const newSignatureImages = [...signatureImages];
-          newSignatureImages[currentSignatureIndex] = {
-            type,
-            value: signatureCanvas.value,
-          };
-          setSignatureImages((p) => p[newSignatureImages]);
         }
         closeSignatureModal();
       }
@@ -145,6 +162,7 @@ const SignDocuments = () => {
   };
   const printToPdf = async () => {
     try {
+      const docs = [];
       await Promise.all(
         docData.data.data.docs.map(async (item, docIndex) => {
           const existingPdfBytes = await fetch(
@@ -210,10 +228,11 @@ const SignDocuments = () => {
           const blob = new Blob([modifiedPdfBytes], {
             type: "application/pdf",
           });
-          completeSign({ id: item._id, doc: blob });
-          saveAs(blob, "modified_document.pdf");
+          // saveAs(blob, "modified_document.pdf");
+          docs.push(blob);
         })
       );
+      completeSign({ id: docData.data.data._id, docs });
     } catch (err) {
       console.log(err);
     }

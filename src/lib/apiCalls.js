@@ -56,7 +56,9 @@ export const getPdf = async ({ queryKey }) => {
 
 export const addSign = async (data) => {
   const formData = new FormData();
-  console.log(data);
-  formData.append("doc", data.doc);
-  return await apiClient.put(`/doc/${data.id}`, formData);
+  formData.append("id", data.id);
+  data.docs.map((item, index) => {
+    formData.append(`docs[${index}].doc`, item);
+  });
+  return await apiClient.put(`/doc/${data.id}/${data.docs.length}`, formData);
 };

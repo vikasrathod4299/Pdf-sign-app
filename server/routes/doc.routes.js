@@ -19,7 +19,6 @@ router.get("/reviewDocs", verifyToken, async (req, res) => {
     });
     res.status(200).json({ message: "Found docs", data: docs });
   } catch (err) {
-    console.log(req.user);
     console.log(err);
     res.status(500).json({ message: "Somthing went wrong." });
   }
@@ -29,7 +28,6 @@ router.get("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const docData = await DocModel.findById(id).lean();
-    console.log(docData);
     if (docData) {
       return res
         .status(200)
@@ -41,49 +39,10 @@ router.get("/:id", async (req, res) => {
     return res.status(500).json({ message: "Somthing went wrong" });
   }
 });
-
-router.put(
-  "/:id",
-  upload.fields([
-    {
-      name: "doc",
-      maxCount: 1,
-    },
-  ]),
-  async (req, res) => {
-    const { id } = req.params;
-    try {
-      const doc = await DocModel.findById(id);
-
-      if (doc) {
-        const filePath = path.join(__dirname, "..", "uploads", doc.docUrl);
-
-        fs.unlink(filePath, (err) => {
-          if (err) {
-            console.error("Error deleting previous certificate:", err);
-          } else {
-            console.log("Previous certificate deleted successfully");
-          }
-        });
-
-        doc.status = "signed";
-        doc.docUrl = req.docUrl;
-        doc.url = req.url;
-      }
-      await doc.save({ validateBeforeSave: true });
-      res.status(200).json({ message: "Document signed" });
-    } catch (err) {
-      console.log(err);
-      return res.status(500).json({ message: "Somthing went wrong" });
-    }
-  }
-);
-
 router.post(
   "/:num",
   verifyToken,
   (req, res, next) => {
-    // Get the field names from req.files
     const { num } = req.params;
     const uploadFields = [];
     req.doc = [];
@@ -91,10 +50,10 @@ router.post(
     for (let i = 0; i < parseInt(num); i++) {
       uploadFields.push({ name: `docs[${i}].doc`, maxCount: 1 });
     }
-
     upload.fields(uploadFields)(req, res, next);
   },
   async (req, res) => {
+    console.log("in post");
     try {
       req.doc.forEach((item, index) => {
         req.body.docs[index]["doc"] = item;
@@ -123,6 +82,45 @@ router.post(
     } catch (err) {
       console.log(err);
       return res.status(500).json({ message: "Somthing went wrong." });
+    }
+  }
+);
+router.put(
+  "/:id/:num",
+  (req, res, next) => {
+    const { num } = req.params;
+    const uploadFields = [];
+    req.doc = [];
+    req.docUrl = [];
+    for (let i = 0; i < parseInt(num); i++) {
+      uploadFields.push({ name: `docs[${i}].doc`, maxCount: 1 });
+    }
+    upload.fields(uploadFields)(req, res, next);
+  },
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const doc = await DocModel.findById(id);
+      doc.docs.forEach((item, index) => {
+        if (doc) {
+          const filePath = path.join(__dirname, "..", "uploads", item.docUrl);
+          fs.unlink(filePath, (err) => {
+            if (err) {
+              console.error("Error deleting previous certificate:", err);
+            } else {
+              console.log("Previous certificate deleted successfully");
+            }
+          });
+          item.docUrl = req.docUrl[index];
+          item.url = req.url[index];
+        }
+      });
+      doc.status = "signed";
+      await doc.save({ validateBeforeSave: true });
+      return res.status(200).json({ message: "Document signed" });
+    } catch (err) {
+      console.log(err);
+      return res.status(500).json({ message: "Somthing went wrong" });
     }
   }
 );

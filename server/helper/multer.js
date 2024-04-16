@@ -32,7 +32,6 @@ export const upload = multer({
     if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      console.log("there");
       return cb(new Error("Only PDF files are allowed"));
     }
   },
