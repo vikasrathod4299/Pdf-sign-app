@@ -250,6 +250,7 @@ const PrepareDocuments = () => {
                   docs={docs}
                   setDocs={setDocs}
                   selectedDoc={selectedDoc}
+                  name={item.doc.name}
                 />
               );
             })}

@@ -349,6 +349,7 @@ const SignDocuments = () => {
                   setSelectedDoc={setSelectedDoc}
                   docs={docData?.data?.data.docs[index]}
                   selectedDoc={selectedDoc}
+                  name={docData?.data?.data.docs[index].doc}
                 />
               );
             })}

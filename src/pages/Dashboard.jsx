@@ -67,15 +67,13 @@ const Dashboard = () => {
                         </span>
                       </td>
                       <td className="h-12 flex items-center justify-center px-4 py-2">
-                        <a
-                          href={`${import.meta.env.VITE_SERVER_API}/uploads/${
-                            item.docs[0].docUrl
-                          }`}
+                        <Link
+                          to={`view-docs/${item._id}`}
                           target="_blank"
                           className="bg-blue-400 text-white text-center rounded-full p-1 px-3 font-medium hover:bg-blue-600"
                         >
                           View
-                        </a>
+                        </Link>
                       </td>
                     </tr>
                   ))}

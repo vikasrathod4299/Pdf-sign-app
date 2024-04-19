@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SignDocuments from "./pages/SignDocuments";
 import Register from "./pages/Register";
+import ViewDocs from "./pages/ViewDocs";
 
 const router = () => {
   return (
@@ -17,6 +18,7 @@ const router = () => {
           <Route path="/" element={<Dashboard />} />
           <Route path="/assignUser" element={<AssignUser />} />
           <Route path="/prepareDocument" element={<PrepareDocuments />} />
+          <Route path="/view-docs/:id" element={<ViewDocs />} />
         </Route>
         <Route path="/signDocument/:id" element={<SignDocuments />} />
       </Routes>

@@ -1,6 +1,13 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 
-const UploadedPdf = ({ setSelectedDoc, index, docs, setDocs, selectedDoc }) => {
+const UploadedPdf = ({
+  setSelectedDoc,
+  index,
+  docs,
+  setDocs,
+  selectedDoc,
+  name,
+}) => {
   const handleClose = () => {
     const updatedDocs = docs.filter((item, docIndex) => {
       if (docIndex !== index) {
@@ -10,6 +17,7 @@ const UploadedPdf = ({ setSelectedDoc, index, docs, setDocs, selectedDoc }) => {
     });
     setDocs([...updatedDocs]);
   };
+
   return (
     <div
       className={`
@@ -18,9 +26,7 @@ const UploadedPdf = ({ setSelectedDoc, index, docs, setDocs, selectedDoc }) => {
           }  rounded-lg h-12 flex items-center justify-between px-4 cursor-pointer hover:bg-slate-400/30`}
       onClick={() => setSelectedDoc(index)}
     >
-      <span className="text-ellipsis">
-        {setDocs ? docs[index]?.doc.name : docs.doc}
-      </span>
+      <span className="text-ellipsis">{name}</span>
       {setDocs && (
         <Cross2Icon
           className={`bg-slate-400/15 w-5 h-5 p-1 rounded-full`}
