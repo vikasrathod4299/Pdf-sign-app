@@ -17,7 +17,10 @@ apiClient.interceptors.request.use(
 );
 
 export const login = async (data) => {
-  return await apiClient.post("/auth/login", data);
+  return await apiClient.post(
+    "https://dev-hubble-api.miraclesoft.com/hubble-v6/emplzoyee/login",
+    data
+  );
 };
 export const register = async (data) => {
   return await apiClient.post("/auth/register", data);

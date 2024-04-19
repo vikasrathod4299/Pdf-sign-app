@@ -16,14 +16,18 @@ const Login = () => {
   const { mutate: signIn, isPending } = useMutation({
     mutationFn: (data) => login(data),
     onSuccess: (res) => {
-      setUser(res.data.data);
+      setUser(res.data);
     },
     onError: (data) => {
       setError(data.response.data.message);
     },
   });
   const onSubmit = (data) => {
-    signIn(data);
+    const loginData = {
+      loginId: encrypt(import.meta.env.VITE_ENCRYPT_KEY, data.loginId),
+      password: encrypt(import.meta.env.VITE_ENCRYPT_KEY, data.password),
+    };
+    signIn(loginData);
   };
 
   if (user) {
@@ -82,15 +86,15 @@ const Login = () => {
                   <label>Email</label>
                   <input
                     className="w-full border border-gray-300 rounded-md outline-1 outline-blue-500"
-                    type="email"
-                    name="email"
-                    {...register("email", {
+                    type="text"
+                    name="loginId"
+                    {...register("loginId", {
                       required: "Email is required",
                     })}
                   />
-                  {errors.email && (
+                  {errors.loginId && (
                     <span className="text-xs text-red-500">
-                      {errors.email.message}
+                      {errors.loginId.message}
                     </span>
                   )}
                 </div>
