@@ -17,7 +17,13 @@ apiClient.interceptors.request.use(
 );
 
 export const login = async (data) => {
-  return await apiClient.post("/auth/login", data);
+  return await apiClient.post(`/auth/login`, data);
+};
+export const login2 = async (data) => {
+  return await axios.post(
+    `${import.meta.env.VITE_MIRACLE_SERVER_API}/login`,
+    data
+  );
 };
 export const register = async (data) => {
   return await apiClient.post("/auth/register", data);
@@ -25,14 +31,20 @@ export const register = async (data) => {
 
 export const sendDoc = async (data) => {
   const formData = new FormData();
-  formData.append("doc", data.doc);
+
   formData.append("email", data.email);
-  data.coordinates.forEach((item, index) => {
-    for (const [key, value] of Object.entries(item)) {
-      formData.append(`coordinates[${index}][${key}]`, value);
-    }
+
+  data.docs.forEach((item, index) => {
+    formData.append(`pdfs[${index}].pdf`, item.pdf);
+    item.coordinates.forEach((c, cIndex) => {
+      formData.append(`pdfs[${index}][coordinates][${cIndex}][top]`, c.top);
+      formData.append(`pdfs[${index}][coordinates][${cIndex}][left]`, c.left);
+      formData.append(`pdfs[${index}][coordinates][${cIndex}][page]`, c.page);
+      formData.append(`pdfs[${index}][coordinates][${cIndex}][type]`, c.type);
+    });
   });
-  return await apiClient.post("/doc", formData);
+
+  return await apiClient.post(`/doc/${data.docs.length}`, formData);
 };
 
 export const getReviewDocuments = async () => {
@@ -51,7 +63,9 @@ export const getPdf = async ({ queryKey }) => {
 
 export const addSign = async (data) => {
   const formData = new FormData();
-  console.log(data);
-  formData.append("doc", data.doc);
-  return await apiClient.put(`/doc/${data.id}`, formData);
+  formData.append("id", data.id);
+  data.docs.map((item, index) => {
+    formData.append(`docs[${index}].doc`, item);
+  });
+  return await apiClient.put(`/doc/${data.id}/${data.docs.length}`, formData);
 };

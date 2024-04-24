@@ -1,8 +1,8 @@
 // eslint-disable-next-line react/prop-types
-const FileUploader = ({ setSelectedDoc }) => {
+const FileUploader = ({ setDocs }) => {
   const handleChange = (e) => {
     const selectedFile = e.target.files[0];
-    setSelectedDoc(selectedFile);
+    setDocs((p) => [{ pdf: selectedFile, coordinates: [] }, ...p]);
   };
   return (
     <label htmlFor="fileInput" className="relative">

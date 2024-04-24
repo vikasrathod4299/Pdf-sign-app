@@ -2,9 +2,10 @@ import { useForm } from "react-hook-form";
 import { Link, Navigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
-import { login } from "../lib/apiCalls";
+import { login2 } from "../lib/apiCalls";
 import { useState } from "react";
-const Login = () => {
+import { encrypt } from "../lib/Crypt";
+const Login2 = () => {
   const {
     register,
     handleSubmit,
@@ -13,16 +14,20 @@ const Login = () => {
   const { user, setUser } = useAuth();
   const [error, setError] = useState(null);
   const { mutate: signIn, isPending } = useMutation({
-    mutationFn: (data) => login(data),
+    mutationFn: (data) => login2(data),
     onSuccess: (res) => {
-      setUser(res.data.data);
+      setUser(res.data);
     },
     onError: (data) => {
       setError(data.response.data.message);
     },
   });
   const onSubmit = (data) => {
-    signIn(data);
+    const loginData = {
+      loginId: encrypt(import.meta.env.VITE_ENCRYPT_KEY, data.loginId),
+      password: encrypt(import.meta.env.VITE_ENCRYPT_KEY, data.password),
+    };
+    signIn(loginData);
   };
 
   if (user) {
@@ -82,14 +87,14 @@ const Login = () => {
                   <input
                     className="w-full border border-gray-300 rounded-md outline-1 outline-blue-500"
                     type="text"
-                    name="email"
-                    {...register("email", {
+                    name="loginId"
+                    {...register("loginId", {
                       required: "Email is required",
                     })}
                   />
-                  {errors.email && (
+                  {errors.loginId && (
                     <span className="text-xs text-red-500">
-                      {errors.email.message}
+                      {errors.loginId.message}
                     </span>
                   )}
                 </div>
@@ -137,4 +142,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Login2;
