@@ -15,14 +15,14 @@ const Login = () => {
   const { mutate: signIn, isPending } = useMutation({
     mutationFn: (data) => login(data),
     onSuccess: (res) => {
-      setUser(res.data);
+      setUser(res.data.data);
     },
     onError: (data) => {
       setError(data.response.data.message);
     },
   });
   const onSubmit = (data) => {
-    signIn(loginData);
+    signIn(data);
   };
 
   if (user) {

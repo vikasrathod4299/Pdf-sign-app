@@ -56,6 +56,7 @@ const PrepareDocuments = () => {
   const [selectedDoc, setSelectedDoc] = useState(0);
   const [docs, setDocs] = useState([]);
   const [numPages, setNumPages] = useState(null);
+
   const { mutate: send, isPending } = useMutation({
     mutationFn: sendDoc,
     onSuccess: () => {
@@ -141,12 +142,20 @@ const PrepareDocuments = () => {
   const handleDragOver = (e) => {
     e.preventDefault();
   };
-
   const renderPages = () => {
     const removeInput = (indexToRemove) => {
-      // setInputPositions(
-      //   inputPositions.filter((_, index) => index !== indexToRemove)
-      // );
+      setDocs((pDocs) => {
+        const docs = pDocs.map((docItem) => {
+          const coordinates = docItem.coordinates.filter(
+            (_, index) => index !== indexToRemove
+          );
+          return {
+            ...docItem,
+            coordinates,
+          };
+        });
+        return docs;
+      });
     };
 
     const pages = [];
@@ -202,6 +211,7 @@ const PrepareDocuments = () => {
   const handleSendDoc = (email) => {
     send({ docs, email });
   };
+  console.log(selectedDoc);
 
   return (
     <>
