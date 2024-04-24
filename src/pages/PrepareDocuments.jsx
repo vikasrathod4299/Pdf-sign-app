@@ -66,6 +66,7 @@ const PrepareDocuments = () => {
       setError(err.response.data.message);
     },
   });
+
   const handleDrop = (e, pageIndex) => {
     e.preventDefault();
     const inputIndex = e.dataTransfer.getData("inputIndex");
@@ -142,6 +143,17 @@ const PrepareDocuments = () => {
     e.preventDefault();
   };
 
+  const onLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+  };
+
+  const handleContinue = () => {
+    setModel(true);
+  };
+  const handleSendDoc = (email) => {
+    send({ docs, email });
+  };
+
   const renderPages = () => {
     const removeInput = (indexToRemove) => {
       // setInputPositions(
@@ -192,17 +204,6 @@ const PrepareDocuments = () => {
     return pages;
   };
 
-  const onLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
-  };
-
-  const handleContinue = () => {
-    setModel(true);
-  };
-  const handleSendDoc = (email) => {
-    send({ docs, email });
-  };
-
   return (
     <>
       {model && (
@@ -250,7 +251,7 @@ const PrepareDocuments = () => {
                   docs={docs}
                   setDocs={setDocs}
                   selectedDoc={selectedDoc}
-                  name={item.doc.name}
+                  name={item.pdf.name}
                 />
               );
             })}
@@ -264,7 +265,7 @@ const PrepareDocuments = () => {
         >
           {docs.length > 0 && (
             <Document
-              file={docs[selectedDoc]["doc"]}
+              file={docs[selectedDoc]["pdf"]}
               onLoadSuccess={onLoadSuccess}
             >
               <div className="flex flex-col justify-center items-center">

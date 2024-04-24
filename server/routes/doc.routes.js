@@ -8,6 +8,7 @@ import path from "path";
 import { verifyToken } from "../middleware/auth.js";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import Pdf from "../model/Pdf.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router();
@@ -46,29 +47,27 @@ router.post(
   (req, res, next) => {
     const { num } = req.params;
     const uploadFields = [];
-    req.doc = [];
-    req.docUrl = [];
+    req.pdf = [];
+    req.pdfUrl = [];
     for (let i = 0; i < parseInt(num); i++) {
-      uploadFields.push({ name: `docs[${i}].doc`, maxCount: 1 });
+      uploadFields.push({ name: `pdfs[${i}].pdf`, maxCount: 1 });
     }
     upload.fields(uploadFields)(req, res, next);
   },
   async (req, res) => {
-    console.log("in post");
     try {
-      req.doc.forEach((item, index) => {
-        req.body.docs[index]["doc"] = item;
-      });
-      req.docUrl.forEach((item, index) => {
-        req.body.docs[index]["docUrl"] = item;
-      });
       const newDoc = new DocModel({
-        docs: req.body.docs,
         senderId: new mongoose.Types.ObjectId(req.user.id),
         receiverEmail: req.body.email,
       });
-
       await newDoc.save({ validateBeforeSave: true });
+      delete req.body["email"];
+      req.body.pdfs.forEach((item, index) => {
+        req.body.pdfs[index]["docId"] = newDoc._id;
+        req.body.pdfs[index]["pdf"] = req.pdf[index];
+        req.body.pdfs[index]["pdfUrl"] = req.pdfUrl[index];
+      });
+      await Pdf.insertMany(req.body.pdfs);
       await sendMail({
         from: {
           name: "Miracle e-signature",
@@ -86,6 +85,7 @@ router.post(
     }
   }
 );
+
 router.put(
   "/:id/:num",
   (req, res, next) => {

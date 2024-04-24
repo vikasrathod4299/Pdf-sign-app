@@ -2,7 +2,7 @@
 const FileUploader = ({ setDocs }) => {
   const handleChange = (e) => {
     const selectedFile = e.target.files[0];
-    setDocs((p) => [{ doc: selectedFile, coordinates: [] }, ...p]);
+    setDocs((p) => [{ pdf: selectedFile, coordinates: [] }, ...p]);
   };
   return (
     <label htmlFor="fileInput" className="relative">

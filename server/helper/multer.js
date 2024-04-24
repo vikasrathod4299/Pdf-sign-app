@@ -16,8 +16,8 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const pdfUrl = `${file.fieldname}-${uniqueSuffix}-.pdf`;
-    req.doc.push(file.originalname);
-    req.docUrl.push(pdfUrl);
+    req.pdf.push(file.originalname);
+    req.pdfUrl.push(pdfUrl);
     cb(null, pdfUrl);
   },
 });
