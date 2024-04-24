@@ -18,7 +18,13 @@ apiClient.interceptors.request.use(
 
 export const login = async (data) => {
   return await apiClient.post(
-    "https://dev-hubble-api.miraclesoft.com/hubble-v6/emplzoyee/login",
+    `${import.meta.env.VITE_SERVER_URL}/auth/login`,
+    data
+  );
+};
+export const login2 = async (data) => {
+  return await apiClient.post(
+    `${import.meta.env.VITE_MIRACLE_SERVER_API}/login`,
     data
   );
 };
