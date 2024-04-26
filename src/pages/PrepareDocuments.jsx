@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useState } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
@@ -142,7 +143,11 @@ const PrepareDocuments = () => {
   const handleDragOver = (e) => {
     e.preventDefault();
   };
+
   const renderPages = () => {
+    if (docs.length === 0) {
+      return null;
+    }
     const removeInput = (indexToRemove) => {
       setDocs((pDocs) => {
         const docs = pDocs.map((docItem) => {
@@ -208,10 +213,10 @@ const PrepareDocuments = () => {
   const handleContinue = () => {
     setModel(true);
   };
+
   const handleSendDoc = (email) => {
     send({ docs, email });
   };
-  console.log(selectedDoc);
 
   return (
     <>
@@ -257,10 +262,9 @@ const PrepareDocuments = () => {
                   key={index}
                   index={index}
                   setSelectedDoc={setSelectedDoc}
-                  docs={docs}
                   setDocs={setDocs}
-                  selectedDoc={selectedDoc}
                   name={item.doc.name}
+                  selectedDoc={selectedDoc}
                 />
               );
             })}

@@ -1,25 +1,15 @@
 /* eslint-disable react/prop-types */
 import { Cross2Icon } from "@radix-ui/react-icons";
 
-const UploadedPdf = ({
-  setSelectedDoc,
-  index,
-  docs,
-  setDocs,
-  selectedDoc,
-  name,
-}) => {
-  const handleClose = () => {
-    if (docs.length - 1 === index) {
-      setSelectedDoc((p) => p - 1);
-    }
-    const updatedDocs = docs.filter((item, docIndex) => {
-      if (docIndex !== index) {
-        return true;
+const UploadedPdf = ({ selectedDoc, setSelectedDoc, index, setDocs, name }) => {
+  const handleClose = (e) => {
+    e.stopPropagation();
+    setDocs((prevDocs) => {
+      if (prevDocs.length - 1 === index && selectedDoc !== 0) {
+        setSelectedDoc((p) => p - 1);
       }
-      return false;
+      return prevDocs.filter((item, docIndex) => docIndex !== index);
     });
-    setDocs([...updatedDocs]);
   };
 
   return (
