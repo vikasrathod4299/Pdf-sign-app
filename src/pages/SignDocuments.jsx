@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { Page, Document } from "react-pdf";
-import { saveAs } from "file-saver";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import SignatureCanvas from "react-signature-canvas";
 import { InfoCircledIcon, Pencil1Icon } from "@radix-ui/react-icons";
@@ -8,22 +7,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { addSign, getDocToSign } from "../lib/apiCalls";
 import CedarvilleCursive from "/public/CedarvilleCursive-Regular.ttf";
-import fontkit from "@pdf-lib/fontkit"; // Import fontkit
+import fontkit from "@pdf-lib/fontkit";
 import UploadedPdf from "../components/UploadedPdf";
 
 const SignDocuments = () => {
   const { id } = useParams();
-  const [signaturePositions, setSignaturePositions] = useState([]);
+
   const [numPages, setNumPages] = useState(null);
-  const [inputTexts, setInputTexts] = useState([[]]);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
-  const [signatureImages, setSignatureImages] = useState([[]]);
   const [confirmModel, setConfirmModel] = useState(false);
-  const [signatureType, setSignatureType] = useState("canvas");
-  const queryClient = useQueryClient();
-  const [textSignature, setTextSignature] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(0);
+
+  const [renderInputs, setRenderInputs] = useState([]);
+  const [singatureInputs, setSignatureInputes] = useState([[]]);
+
+  const [signatureType, setSignatureType] = useState("canvas");
+  const [currentSignatureIndex, setCurrentSignatureIndex] = useState(null);
+
+  const queryClient = useQueryClient();
+
   const { data: docData, isPending: docIsPending } = useQuery({
     queryKey: ["fetchDocData", id],
     queryFn: getDocToSign,
@@ -45,56 +47,52 @@ const SignDocuments = () => {
   });
 
   useEffect(() => {
-    try {
-      if (!docIsPending) {
-        if (docData?.data?.data) {
-          const data = docData?.data?.data.docs[selectedDoc];
-          setSignaturePositions(
-            data.coordinates.map((item) => {
-              return {
-                left: parseFloat(item.left),
-                top: parseFloat(item.top),
-                page: parseInt(item.page),
-                type: item.type,
-              };
-            })
-          );
-        }
-      }
-    } catch (error) {
-      console.error(
-        "Error retrieving or parsing data from localStorage:",
-        error
+    if (docData?.data?.data) {
+      const data = docData?.data?.data.docs[selectedDoc];
+      setRenderInputs(
+        data.coordinates.map((item) => {
+          return {
+            left: parseFloat(item.left),
+            top: parseFloat(item.top),
+            page: parseInt(item.page),
+            type: item.type,
+          };
+        })
       );
     }
   }, [docData, selectedDoc, docIsPending]);
 
-  useEffect(() => {
-    if (!docIsPending) {
-      if (docData?.data?.data) {
-        const data = docData?.data?.data.docs[selectedDoc];
-        setSignatureImages((p) =>
-          Array(docData.data.data.docs.length).fill(
-            Array(data.coordinates.length).fill(null)
-          )
-        );
-      }
-    }
+  // useEffect(() => {
+  //   if (!docIsPending) {
+  //     if (docData?.data?.data) {
+  //       const data = docData?.data?.data.docs[selectedDoc];
+  //       singatureInputs((p) =>
+  //         Array(docData.data.data.docs.length).fill(
+  //           Array(data.coordinates.length).fill(null)
+  //         )
+  //       );
+  //     }
+  //   }
 
-    setInputTexts((p) => [...p]);
-  }, [docData, docIsPending]);
-  console.log(signatureImages);
+  // }, [docData, docIsPending]);
+
   const signatureRef = useRef([]);
 
-  const handleTextChange = (e, pageIndex) => {
+  const handleTextChange = (e, curInputIndex) => {
     const { value } = e.target;
 
-    setInputTexts((prevInputTexts) => {
+    setSignatureInputes((prevInputTexts) => {
       const data = docData.data.data.docs.map((item, index) => {
         if (index === selectedDoc) {
-          return [value];
+          const inputData = renderInputs.map((inputItem, inputIndex) => {
+            if (curInputIndex === inputIndex) {
+              return value;
+            }
+            return prevInputTexts?.[selectedDoc]?.[inputIndex];
+          });
+          return inputData;
         }
-        return prevInputTexts[index];
+        return prevInputTexts?.[index];
       });
       return data;
     });
@@ -116,45 +114,83 @@ const SignDocuments = () => {
     setShowSignatureModal(false);
     setCurrentSignatureIndex(null);
   };
+
   const addSignature = (type) => {
     if (currentSignatureIndex !== null) {
       const signatureCanvas = signatureRef.current[currentSignatureIndex];
 
       if (signatureCanvas) {
         if (type === "canvas") {
-          const newSignatureImages = signatureImages.map((item, index) => {
-            if (index === selectedDoc) {
-              return item.map((docItem, docIndex) => {
-                if (currentSignatureIndex === docIndex) {
-                  return {
-                    type,
-                    value: signatureCanvas.getTrimmedCanvas().toDataURL(),
-                  };
-                }
-                return docItem;
-              });
-            }
-            return item;
-          });
-          setSignatureImages([...newSignatureImages]);
-        } else if (type === "text") {
-          const newSignatureImages = signatureImages.map((item, index) => {
-            if (index === selectedDoc) {
-              return item.map((docItem, docIndex) => {
-                console.log();
-                if (currentSignatureIndex === docIndex) {
-                  return {
-                    type,
-                    value: signatureCanvas.value,
-                  };
-                }
-                return docItem;
-              });
-            }
-            return item;
+          setSignatureInputes((preInput) => {
+            const data = docData?.data?.data?.docs?.map((item, index) => {
+              if (selectedDoc === index) {
+                const inputData = renderInputs.map((inputItem, inputIndex) => {
+                  if (currentSignatureIndex === inputIndex) {
+                    return {
+                      type,
+                      value: signatureCanvas.getTrimmedCanvas().toDataURL(),
+                    };
+                  }
+                  return preInput?.[selectedDoc]?.[inputIndex];
+                });
+                return inputData;
+              }
+              return preInput[index];
+            });
+            return data;
           });
 
-          setSignatureImages([...newSignatureImages]);
+          // const newSignatureImages = signatureImages.map((item, index) => {
+          //   if (index === selectedDoc) {
+          //     return item.map((docItem, docIndex) => {
+          //       if (currentSignatureIndex === docIndex) {
+          //         return {
+          //           type,
+          //           value: signatureCanvas.getTrimmedCanvas().toDataURL(),
+          //         };
+          //       }
+          //       return docItem;
+          //     });
+          //   }
+          //   return item;
+          // });
+          // setSignatureImages([...newSignatureImages]);
+        } else if (type === "text") {
+          setSignatureInputes((preInput) => {
+            const data = docData?.data?.data?.docs?.map((item, index) => {
+              if (selectedDoc === index) {
+                const inputData = renderInputs.map((inputItem, inputIndex) => {
+                  if (currentSignatureIndex === inputIndex) {
+                    return {
+                      type,
+                      value: signatureCanvas.value,
+                    };
+                  }
+                  return preInput?.[selectedDoc]?.[inputIndex];
+                });
+                return inputData;
+              }
+              return preInput[index];
+            });
+            return data;
+          });
+
+          // const newSignatureImages = signatureImages.map((item, index) => {
+          //   if (index === selectedDoc) {
+          //     return item.map((docItem, docIndex) => {
+          //       if (currentSignatureIndex === docIndex) {
+          //         return {
+          //           type,
+          //           value: signatureCanvas.value,
+          //         };
+          //       }
+          //       return docItem;
+          //     });
+          //   }
+          //   return item;
+          // });
+
+          // setSignatureImages([...newSignatureImages]);
         }
         closeSignatureModal();
       }
@@ -173,14 +209,13 @@ const SignDocuments = () => {
           const pdfDoc = await PDFDocument.load(existingPdfBytes);
           pdfDoc.registerFontkit(fontkit);
           const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-          for (let index = 0; index < signaturePositions.length; index++) {
-            const input = signaturePositions[index];
+          for (let index = 0; index < item.coordinates.length; index++) {
+            const input = item?.coordinates?.[index];
             const page = pdfDoc.getPage(input.page - 1);
-            const x = input.left;
-            const y = page.getHeight() - input.top - 25;
+            const x = parseInt(input.left);
+            const y = page.getHeight() - parseInt(input.top) - 25;
             if (input.type === "text") {
-              const textToPrint = inputTexts[docIndex][index] || ""; // Ensure textToPrint is not undefined
+              const textToPrint = singatureInputs[docIndex][index] || "";
               page.drawText(textToPrint, {
                 x,
                 y,
@@ -189,11 +224,11 @@ const SignDocuments = () => {
                 color: rgb(0, 0, 0),
               });
             } else if (input.type === "signature") {
-              if (signatureImages?.[docIndex]?.[index]) {
+              if (singatureInputs?.[docIndex]?.[index]) {
                 // Check if signature image is available
-                if (signatureImages[docIndex][index].type === "canvas") {
+                if (singatureInputs[docIndex][index].type === "canvas") {
                   const signatureImageBytes = await fetch(
-                    signatureImages[docIndex][index].value
+                    singatureInputs[docIndex][index].value
                   ).then((res) => res.arrayBuffer());
                   const signatureImageObj = await pdfDoc.embedPng(
                     signatureImageBytes
@@ -209,7 +244,7 @@ const SignDocuments = () => {
                     res.arrayBuffer()
                   );
                   const textToPrint =
-                    signatureImages[docIndex][index].value || "";
+                    singatureInputs[docIndex][index].value || "";
                   const customFont = await pdfDoc.embedFont(fontBytes);
 
                   page.setFont(customFont);
@@ -238,13 +273,15 @@ const SignDocuments = () => {
     }
   };
 
+  console.log(singatureInputs);
+
   const renderPages = () => {
     const pages = [];
     for (let i = 0; i < numPages; i++) {
       pages.push(
         <div key={i} style={{ position: "relative" }}>
           <Page pageNumber={i + 1} renderTextLayer={false} />
-          {signaturePositions.map((position, index) =>
+          {renderInputs.map((position, index) =>
             position.page === i + 1 ? (
               <div
                 key={index}
@@ -261,32 +298,32 @@ const SignDocuments = () => {
                     name="left"
                     placeholder="Enter text here"
                     onChange={(e) => handleTextChange(e, index)}
-                    value={inputTexts?.[selectedDoc]?.[index] || ""}
+                    value={singatureInputs?.[selectedDoc]?.[index] || ""}
                   />
                 )}
                 {position.type === "signature" && (
                   <>
-                    {signatureImages?.[selectedDoc]?.[index] ? (
+                    {singatureInputs?.[selectedDoc]?.[index] ? (
                       <div className="flex gap-x-2 items-center">
-                        {signatureImages[selectedDoc][index].type ===
+                        {singatureInputs[selectedDoc][index].type ===
                         "canvas" ? (
                           <img
                             className="border border-blue-400"
-                            src={signatureImages[selectedDoc][index].value}
+                            src={singatureInputs[selectedDoc][index].value}
                             width={100}
                             height={50}
                             alt="Signature"
                           />
                         ) : (
                           <p className="font-cursive font-bold text-xl">
-                            {signatureImages[selectedDoc][index].value}
+                            {singatureInputs?.[selectedDoc]?.[index]?.value}
                           </p>
                         )}
                         <button
                           onClick={() =>
                             openSignatureModal(
                               index,
-                              signatureImages[selectedDoc][index]
+                              singatureInputs[selectedDoc][index]
                             )
                           }
                           className="bg-blue-400/80 rounded-full h-6 w-6 p-1 flex justify-center items-center"
@@ -322,10 +359,10 @@ const SignDocuments = () => {
       <div className="w-96 p-4">
         <div className="flex flex-col gap-y-4">
           <button className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
-            Next ⏭ {/*<Pencil2Icon /> */}
+            Next ⏭
           </button>
           <button className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none">
-            Previous ⏮ {/*<Pencil2Icon /> */}
+            Previous ⏮
           </button>
 
           <button
@@ -335,7 +372,7 @@ const SignDocuments = () => {
             disabled={docData?.data?.data.status !== "pending"}
             className="bg-gray-200 w-44 gap-x-2 flex items-center justify-center rounded-full px-4  cursor-pointer py-2 font-bold text-black focus:outline-none"
           >
-            Complete sign ✍ {/*<Pencil2Icon /> */}
+            Complete sign ✍
           </button>
         </div>
         <hr className="my-8" />
@@ -381,7 +418,6 @@ const SignDocuments = () => {
           )
         )}
       </div>
-
       {showSignatureModal && (
         <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 flex  justify-center items-center">
           <div className="bg-white p-4 flex flex-col  rounded-lg">
@@ -419,7 +455,6 @@ const SignDocuments = () => {
               <input
                 className="border-2 border-blue-400 p-2 rounded-md outline-2 outline-blue-400 font-cursive text-2xl font-bold"
                 placeholder="Type signature"
-                onChange={(e) => setTextSignature(e.target.value)}
                 ref={(ref) =>
                   (signatureRef.current[currentSignatureIndex] = ref)
                 }
