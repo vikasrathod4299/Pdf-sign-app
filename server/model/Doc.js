@@ -19,7 +19,7 @@ const DocSchema = new Schema({
   ],
 
   senderId: {
-    type: Schema.Types.ObjectId, // Correctly reference ObjectId type
+    type: String, // Correctly reference ObjectId type
     ref: "User",
   },
   receiverId: {

@@ -1,6 +1,4 @@
-import React from "react";
 import { Navigate, Outlet } from "react-router";
-import Login from "../pages/Login";
 
 const ProtectedRoute = () => {
   const data = localStorage.getItem("user");

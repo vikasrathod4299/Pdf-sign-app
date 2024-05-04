@@ -3,7 +3,6 @@ import express from "express";
 import { upload } from "../helper/multer.js";
 import { sendMail } from "../helper/sendMail.js";
 import DocModel from "../model/Doc.js";
-import mongoose from "mongoose";
 import path from "path";
 import { verifyToken } from "../middleware/auth.js";
 import { fileURLToPath } from "url";
@@ -15,7 +14,7 @@ const router = express.Router();
 router.get("/reviewDocs", verifyToken, async (req, res) => {
   try {
     const docs = await DocModel.find({
-      senderId: new mongoose.Types.ObjectId(req.user.id),
+      senderId: req.user.loginId,
     });
     res.status(200).json({ message: "Found docs", data: docs });
   } catch (err) {
@@ -54,7 +53,6 @@ router.post(
     upload.fields(uploadFields)(req, res, next);
   },
   async (req, res) => {
-    console.log("in post");
     try {
       req.doc.forEach((item, index) => {
         req.body.docs[index]["doc"] = item;
@@ -64,7 +62,7 @@ router.post(
       });
       const newDoc = new DocModel({
         docs: req.body.docs,
-        senderId: new mongoose.Types.ObjectId(req.user.id),
+        senderId: req.user.loginId,
         receiverEmail: req.body.email,
       });
 

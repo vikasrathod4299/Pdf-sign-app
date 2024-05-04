@@ -83,13 +83,13 @@ const Login2 = () => {
                 onSubmit={handleSubmit(onSubmit)}
               >
                 <div>
-                  <label>Email</label>
+                  <label>Login Id</label>
                   <input
                     className="w-full border border-gray-300 rounded-md outline-1 outline-blue-500"
                     type="text"
                     name="loginId"
                     {...register("loginId", {
-                      required: "Email is required",
+                      required: "Login Id is required",
                     })}
                   />
                   {errors.loginId && (
