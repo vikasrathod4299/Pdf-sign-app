@@ -12,6 +12,7 @@ import UploadedPdf from "../components/UploadedPdf";
 
 const SignDocuments = () => {
   const { id } = useParams();
+  const [error, setError] = useState(false);
 
   const [numPages, setNumPages] = useState(null);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
@@ -37,7 +38,7 @@ const SignDocuments = () => {
 
   const { mutate: completeSign } = useMutation({
     mutationFn: addSign,
-    onSuccess: (res) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fetchDocData", id] });
       setConfirmModel(false);
     },
@@ -62,20 +63,6 @@ const SignDocuments = () => {
     }
   }, [docData, selectedDoc, docIsPending]);
 
-  // useEffect(() => {
-  //   if (!docIsPending) {
-  //     if (docData?.data?.data) {
-  //       const data = docData?.data?.data.docs[selectedDoc];
-  //       singatureInputs((p) =>
-  //         Array(docData.data.data.docs.length).fill(
-  //           Array(data.coordinates.length).fill(null)
-  //         )
-  //       );
-  //     }
-  //   }
-
-  // }, [docData, docIsPending]);
-
   const signatureRef = useRef([]);
 
   const handleTextChange = (e, curInputIndex) => {
@@ -96,6 +83,25 @@ const SignDocuments = () => {
       });
       return data;
     });
+  };
+
+  const checkAllSignaturesEntered = () => {
+    const totalInputs = docData.data.data.docs.reduce(
+      (total, doc) => total + doc?.coordinates?.length || 0,
+      0
+    );
+    const signaturedEnterd = singatureInputs.reduce((total, item) => {
+      const totalInput = item.reduce(
+        (total, input) => total + (input ? 1 : 0),
+        0
+      );
+      return total + totalInput;
+    }, 0);
+    console.log(totalInputs, signaturedEnterd);
+    if (totalInputs !== signaturedEnterd) {
+      setError("Please enter all the singnature given in all documents.");
+    }
+    return totalInputs === signaturedEnterd;
   };
 
   const openSignatureModal = (index, signatureDataURL) => {
@@ -139,22 +145,6 @@ const SignDocuments = () => {
             });
             return data;
           });
-
-          // const newSignatureImages = signatureImages.map((item, index) => {
-          //   if (index === selectedDoc) {
-          //     return item.map((docItem, docIndex) => {
-          //       if (currentSignatureIndex === docIndex) {
-          //         return {
-          //           type,
-          //           value: signatureCanvas.getTrimmedCanvas().toDataURL(),
-          //         };
-          //       }
-          //       return docItem;
-          //     });
-          //   }
-          //   return item;
-          // });
-          // setSignatureImages([...newSignatureImages]);
         } else if (type === "text") {
           setSignatureInputes((preInput) => {
             const data = docData?.data?.data?.docs?.map((item, index) => {
@@ -174,106 +164,92 @@ const SignDocuments = () => {
             });
             return data;
           });
-
-          // const newSignatureImages = signatureImages.map((item, index) => {
-          //   if (index === selectedDoc) {
-          //     return item.map((docItem, docIndex) => {
-          //       if (currentSignatureIndex === docIndex) {
-          //         return {
-          //           type,
-          //           value: signatureCanvas.value,
-          //         };
-          //       }
-          //       return docItem;
-          //     });
-          //   }
-          //   return item;
-          // });
-
-          // setSignatureImages([...newSignatureImages]);
         }
         closeSignatureModal();
       }
     }
   };
+
   const printToPdf = async () => {
     try {
-      const docs = [];
-      await Promise.all(
-        docData.data.data.docs.map(async (item, docIndex) => {
-          const existingPdfBytes = await fetch(
-            `${import.meta.env.VITE_SERVER_API}/uploads/${item.docUrl}`,
-            { method: "GET" }
-          ).then((res) => res.arrayBuffer());
+      if (checkAllSignaturesEntered()) {
+        const docs = [];
+        await Promise.all(
+          docData.data.data.docs.map(async (item, docIndex) => {
+            const existingPdfBytes = await fetch(
+              `${import.meta.env.VITE_SERVER_API}/uploads/${item.docUrl}`,
+              { method: "GET" }
+            ).then((res) => res.arrayBuffer());
 
-          const pdfDoc = await PDFDocument.load(existingPdfBytes);
-          pdfDoc.registerFontkit(fontkit);
-          const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-          for (let index = 0; index < item.coordinates.length; index++) {
-            const input = item?.coordinates?.[index];
-            const page = pdfDoc.getPage(input.page - 1);
-            const x = parseInt(input.left);
-            const y = page.getHeight() - parseInt(input.top) - 25;
-            if (input.type === "text") {
-              const textToPrint = singatureInputs[docIndex][index] || "";
-              page.drawText(textToPrint, {
-                x,
-                y,
-                size: 12,
-                font: helveticaFont,
-                color: rgb(0, 0, 0),
-              });
-            } else if (input.type === "signature") {
-              if (singatureInputs?.[docIndex]?.[index]) {
-                // Check if signature image is available
-                if (singatureInputs[docIndex][index].type === "canvas") {
-                  const signatureImageBytes = await fetch(
-                    singatureInputs[docIndex][index].value
-                  ).then((res) => res.arrayBuffer());
-                  const signatureImageObj = await pdfDoc.embedPng(
-                    signatureImageBytes
-                  );
-                  page.drawImage(signatureImageObj, {
-                    x,
-                    y,
-                    width: 80,
-                    height: 30,
-                  });
-                } else {
-                  const fontBytes = await fetch(CedarvilleCursive).then((res) =>
-                    res.arrayBuffer()
-                  );
-                  const textToPrint =
-                    singatureInputs[docIndex][index].value || "";
-                  const customFont = await pdfDoc.embedFont(fontBytes);
+            const pdfDoc = await PDFDocument.load(existingPdfBytes);
+            pdfDoc.registerFontkit(fontkit);
+            const helveticaFont = await pdfDoc.embedFont(
+              StandardFonts.Helvetica
+            );
+            for (let index = 0; index < item.coordinates.length; index++) {
+              const input = item?.coordinates?.[index];
+              const page = pdfDoc.getPage(input.page - 1);
+              const x = parseInt(input.left);
+              const y = page.getHeight() - parseInt(input.top) - 25;
+              if (input.type === "text") {
+                const textToPrint = singatureInputs[docIndex][index] || "";
+                page.drawText(textToPrint, {
+                  x,
+                  y,
+                  size: 12,
+                  font: helveticaFont,
+                  color: rgb(0, 0, 0),
+                });
+              } else if (input.type === "signature") {
+                if (singatureInputs?.[docIndex]?.[index]) {
+                  // Check if signature image is available
+                  if (singatureInputs[docIndex][index].type === "canvas") {
+                    const signatureImageBytes = await fetch(
+                      singatureInputs[docIndex][index].value
+                    ).then((res) => res.arrayBuffer());
+                    const signatureImageObj = await pdfDoc.embedPng(
+                      signatureImageBytes
+                    );
+                    page.drawImage(signatureImageObj, {
+                      x,
+                      y,
+                      width: 80,
+                      height: 30,
+                    });
+                  } else {
+                    const fontBytes = await fetch(CedarvilleCursive).then(
+                      (res) => res.arrayBuffer()
+                    );
+                    const textToPrint =
+                      singatureInputs[docIndex][index].value || "";
+                    const customFont = await pdfDoc.embedFont(fontBytes);
 
-                  page.setFont(customFont);
-                  page.drawText(textToPrint, {
-                    x,
-                    y,
-                    size: 24,
-                    color: rgb(0, 0, 0),
-                  });
+                    page.setFont(customFont);
+                    page.drawText(textToPrint, {
+                      x,
+                      y,
+                      size: 24,
+                      color: rgb(0, 0, 0),
+                    });
+                  }
                 }
               }
             }
-          }
 
-          const modifiedPdfBytes = await pdfDoc.save();
-          const blob = new Blob([modifiedPdfBytes], {
-            type: "application/pdf",
-          });
-          // saveAs(blob, "modified_document.pdf");
-          docs.push(blob);
-        })
-      );
-      completeSign({ id: docData.data.data._id, docs });
+            const modifiedPdfBytes = await pdfDoc.save();
+            const blob = new Blob([modifiedPdfBytes], {
+              type: "application/pdf",
+            });
+            // saveAs(blob, "modified_document.pdf");
+            docs.push(blob);
+          })
+        );
+        completeSign({ id: docData.data.data._id, docs });
+      }
     } catch (err) {
       console.log(err);
     }
   };
-
-  console.log(singatureInputs);
 
   const renderPages = () => {
     const pages = [];
@@ -488,7 +464,10 @@ const SignDocuments = () => {
             </div>
             <div className="flex gap-x-2 w-full">
               <button
-                onClick={() => setConfirmModel(false)}
+                onClick={() => {
+                  setConfirmModel(false);
+                  setError("");
+                }}
                 className="bg-gray-400 w-full shadow-md text-white px-4 py-2 mt-2 rounded-md"
               >
                 Cancel
@@ -500,6 +479,7 @@ const SignDocuments = () => {
                 Submit
               </button>
             </div>
+            <span className="text-red-500 text-sm">{error}</span>
           </div>
         </div>
       )}

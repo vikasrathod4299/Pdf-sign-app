@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Document, Page } from "react-pdf";
 import FileUploader from "../components/FileUploader";
 import UploadedPdf from "../components/UploadedPdf.jsx";
@@ -13,7 +13,13 @@ import Button from "../components/shared/Button";
 import Draggable from "../components/shared/Draggable";
 import Model from "../components/shared/Model/Model";
 
-const EnterEmailPopUp = ({ setModel, error, handleSendDoc, isPending }) => {
+const EnterEmailPopUp = ({
+  setModel,
+  error,
+  handleSendDoc,
+  isPending,
+  setError,
+}) => {
   const [email, setEmail] = useState("");
   return (
     <>
@@ -32,7 +38,10 @@ const EnterEmailPopUp = ({ setModel, error, handleSendDoc, isPending }) => {
       {error && <span className="text-xs text-red-500">{error}</span>}
       <div className="flex gap-x-2 justify-end">
         <button
-          onClick={() => setModel(false)}
+          onClick={() => {
+            setModel(false);
+            setError("");
+          }}
           className="bg-gray-400 shadow-md text-white px-4 py-2 mt-2 rounded-md"
         >
           Cancel
@@ -54,6 +63,7 @@ const PrepareDocuments = () => {
   const navigate = useNavigate();
   const [model, setModel] = useState(false);
   const [error, setError] = useState("");
+  const [docError, setDocError] = useState("");
   const [selectedDoc, setSelectedDoc] = useState(0);
   const [docs, setDocs] = useState([]);
   const [numPages, setNumPages] = useState(null);
@@ -110,7 +120,6 @@ const PrepareDocuments = () => {
       const pageLeft = 0;
       const adjustedOffsetX = offsetX - pageLeft;
       const adjustedOffsetY = offsetY - pageTop + pageIndex * pageHeight;
-
       const type = e.dataTransfer.getData("type");
       const newPosition = {
         page,
@@ -211,11 +220,23 @@ const PrepareDocuments = () => {
   };
 
   const handleContinue = () => {
-    setModel(true);
+    if (docs.length > 0) {
+      setModel(true);
+    } else {
+      setDocError("Please upload a document.");
+    }
   };
-
+  useEffect(() => {
+    if (docs.length > 0) {
+      setDocError("");
+    }
+  }, [docs]);
   const handleSendDoc = (email) => {
-    send({ docs, email });
+    if (email) {
+      send({ docs, email });
+    } else {
+      setError("Please enter email!");
+    }
   };
 
   return (
@@ -226,6 +247,7 @@ const PrepareDocuments = () => {
             setModel={setModel}
             error={error}
             isPending={isPending}
+            setError={setError}
             handleSendDoc={handleSendDoc}
           />
         </Model>
@@ -237,6 +259,7 @@ const PrepareDocuments = () => {
           <div className="flex flex-col gap-y-3">
             <p>Step 1</p>
             <FileUploader setDocs={setDocs} />
+            <span className="text-red-500 text-xs">{docError}</span>
             <p>Step 2</p>
             <Draggable
               handleDragStart={handleDragStart}
