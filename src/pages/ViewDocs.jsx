@@ -36,6 +36,14 @@ const ViewDocs = () => {
   if (!isPending) {
     console.log(docsData.data.data.docs[selectedDoc].doc);
   }
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    const url = docsData?.data?.data?.docs?.[selectedDoc]?.docUrl;
+    if (url) {
+      const fileUrl = `${import.meta.env.VITE_SERVER_API}/uploads/${url}`;
+      window.open(fileUrl, "_blank");
+    }
+  };
   return (
     <div className="flex " style={{ height: "calc(100vh - 64px)" }}>
       <div className="w-96 p-4">
@@ -50,6 +58,8 @@ const ViewDocs = () => {
                   docs={docsData.data.data.docs[selectedDoc]}
                   selectedDoc={selectedDoc}
                   name={docsData.data.data.docs[index].doc}
+                  handleDownload={handleDownload}
+                  view
                 />
               );
             })}
