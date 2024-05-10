@@ -190,7 +190,13 @@ const SignDocuments = () => {
               const input = item?.coordinates?.[index];
               const page = pdfDoc.getPage(input.page - 1);
               const x = parseInt(input.left);
-              const y = page.getHeight() - parseInt(input.top) - 25;
+              const isSignature =
+                input.type === "signature" &&
+                singatureInputs[docIndex][index].type === "canvas";
+              const y =
+                page.getHeight() -
+                parseInt(input.top) -
+                (isSignature ? 45 : 25);
               if (input.type === "text") {
                 const textToPrint = singatureInputs[docIndex][index] || "";
                 page.drawText(textToPrint, {
